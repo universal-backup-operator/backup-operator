@@ -28,3 +28,6 @@ Dockerfile.cross
 kubeconfig.yaml
 __debug_bin*
 local/
+
+# mkdocs artifact
+site
