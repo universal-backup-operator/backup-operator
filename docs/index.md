@@ -54,7 +54,7 @@ spec:
         container: mysql
         command: ["/bin/sh", "-c"]
         args:
-        - mysqldump -h mysql.default -u mysql "-p${PASSWORD}" default
+        - mysqldump -h "${HOSTNAME}" -u "${USERNAME}" "-p${PASSWORD}" "${DATABASE}"
       # Command for pod exec for making a restoration
       restore:
         deadlineSeconds: 300
@@ -62,7 +62,7 @@ spec:
         command: ["/bin/sh", "-c"]
         args:
         # Backup data will be passed to STDIN
-        - mysql -h mysql.default -u mysql "-p${PASSWORD}" default
+        - mysql -h "${HOSTNAME}" -u "${USERNAME}" "-p${PASSWORD}" "${DATABASE}"
       template:
         spec:
           restartPolicy: Never
@@ -75,7 +75,7 @@ spec:
               value: mysql.development
             - name: DATABASE
               value: backend_db
-            - name: username
+            - name: USERNAME
               valueFrom:
                 secretKeyRef:
                   name: mysql-credentials
