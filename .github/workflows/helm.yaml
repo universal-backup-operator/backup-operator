@@ -11,6 +11,11 @@ on:
       - "v*"
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag
+        required: true
+        type: string
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -47,7 +52,8 @@ jobs:
             VERSION="${TAG#v}"
             yq -i '.appVersion = strenv(VERSION)' charts/backup-operator/Chart.yaml
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag }}
+          # TAG: ${{ github.ref_name }}
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
