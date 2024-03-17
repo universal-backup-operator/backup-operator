@@ -54,7 +54,9 @@ markdown_extensions:
   - pymdownx.superfences
 
 nav:
-  - Introduction: index.md
+  - Introduction:
+      - Overview: introduction/index.md
+      - Getting started: introduction/getting-started.md
   - Reference:
       - BackupStorage: reference/storage.md
       - BackupSchedule: reference/schedule.md
