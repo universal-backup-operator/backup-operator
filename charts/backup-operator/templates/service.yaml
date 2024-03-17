@@ -1,0 +1,30 @@
+{{- if .Values.service.create }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "backup-operator.fullname" . }}
+  labels:
+    {{- include "backup-operator.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  {{- if .Values.metrics.enabled }}
+  - port: {{ int .Values.metrics.servicePort }}
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  {{- end }}
+  - port: 443
+    targetPort: webhook
+    protocol: TCP
+    name: webhook
+  selector:
+    {{- include "backup-operator.selectorLabels" . | nindent 4 }}
+  {{- with .Values.service.spec }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end }}

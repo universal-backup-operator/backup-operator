@@ -1,0 +1,13 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "backup-operator.fullname" . }}
+  labels:
+    {{- include "backup-operator.labels" . | nindent 4 }}
+spec:
+  {{- toYaml .Values.pdb.spec | nindent 2 }}
+  selector:
+    matchLabels:
+      {{- include "backup-operator.selectorLabels" . | nindent 6 }}
+{{- end -}}

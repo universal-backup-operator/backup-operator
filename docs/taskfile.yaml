@@ -1,0 +1,19 @@
+version: '3'
+
+tasks:
+  # Install required mkdocs python packages
+  install:
+    cmds:
+      - >-
+        pip install --upgrade
+        mkdocs-material
+        mkdocs-git-revision-date-localized-plugin
+        mkdocs-git-authors-plugin
+
+  build:
+    cmds:
+    - mkdocs build
+
+  serve:
+    cmds:
+    - mkdocs serve

@@ -1,0 +1,123 @@
+#  ┬─┐┬─┐┌─┐┬┌ ┬ ┐┬─┐  ┌─┐┬─┐┬─┐┬─┐┬─┐┌┐┐┌─┐┬─┐
+#  │─││─┤│  ├┴┐│ ││─┘  │ ││─┘├─ │┬┘│─┤ │ │ ││┬┘
+#  ┘─┘┘ ┘└─┘┘ ┘┘─┘┘    ┘─┘┘  ┴─┘┘└┘┘ ┘ ┘ ┘─┘┘└┘
+
+replicaCount: 1
+clusterDomain: cluster.local
+
+image:
+  repository: ghcr.io/universal-backup-operator/backup-operator
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+  # For passing extra settings
+  spec: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 65532
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  privileged: false
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  # runAsUser: 65532
+
+# Extra args to manager command
+extraArgs:
+- --zap-devel=false
+
+# Extra values for Deployment spec, template.spec, container.spec
+deployment:
+  spec: {}
+  template:
+    spec: {}
+  container:
+    spec: {}
+
+service:
+  create: true
+  type: ClusterIP
+  annotations: {}
+  spec: {}
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+pdb:
+  enabled: false
+  spec:
+    minAvailable: 1
+    # maxUnavailable: 1
+    # unhealthyPodEvictionPolicy: AlwaysAllow
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+extraVolumes: []
+
+extraVolumeMounts: []
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 15
+  periodSeconds: 20
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+startupProbe:
+  tcpSocket:
+    port: 8081
+
+env: []
+
+envFrom: []
+
+initContainers: []
+
+rbac:
+  create: true
+
+metrics:
+  enabled: false
+  servicePort: 80
+  serviceMonitor:
+    create: false

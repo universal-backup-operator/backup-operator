@@ -1,0 +1,15 @@
+{{- range $key, $body := .Values.raw }}
+  {{- if $body }}
+    {{- if regexMatch $.Values.rawTemplatedRegex $key }}
+      {{- if kindIs "string" $body | not }}
+        {{- $body = toYaml $body }}
+      {{- end }}
+      {{- $body = tpl $body $ | fromYaml }}
+    {{- else if kindIs "string" $body }}
+      {{- $body = fromYaml $body }}
+    {{- end }}
+    {{- $manifest := include "raw.labels" $ | fromYaml | dict "labels" | dict "metadata" | mergeOverwrite $body }}
+    {{- toYaml $manifest | nindent 0 }}
+---
+  {{- end }}
+{{- end }}

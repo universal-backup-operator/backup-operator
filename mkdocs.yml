@@ -1,0 +1,40 @@
+site_name: Backup Operator
+site_url: https://backup-operator.io
+repo_url: https://github.com/universal-backup-operator/backup-operator
+edit_uri: edit/main/docs/
+theme:
+  name: material
+  language: en
+  logo: assets/icon.png
+  favicon: assets/icon.png
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil 
+    view: material/eye
+  features:
+    - content.action.edit
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+  font:
+    code: Roboto
+  palette:
+    primary: blue grey
+    accent: orange
+
+plugins:
+- search
+- git-authors
+- git-revision-date-localized:
+    enable_creation_date: true
+    fallback_to_build_date: true
+
+extra:
+  analytics:
+    provider: google
+    property: G-EJCXGQ3MDR

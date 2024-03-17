@@ -1,0 +1,47 @@
+{{- $name := include "backup-operator.fullname" . }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ $name | printf "%s-mutation" | trunc 63 | trimSuffix "-" }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ include "backup-operator.webhookCertificateName" . | printf "%s/%s" .Release.Namespace }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ $name }}
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-backup-operator-io-v1-backuprun
+  failurePolicy: Fail
+  name: mbackuprun.kb.io
+  rules:
+  - apiGroups:
+    - backup-operator.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - backupruns
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ $name }}
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-backup-operator-io-v1-backupstorage
+  failurePolicy: Fail
+  name: mbackupstorage.kb.io
+  rules:
+  - apiGroups:
+    - backup-operator.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - backupstorages
+  sideEffects: None

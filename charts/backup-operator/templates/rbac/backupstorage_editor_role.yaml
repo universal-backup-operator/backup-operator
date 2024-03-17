@@ -1,0 +1,28 @@
+{{- if .Values.rbac.create }}
+# permissions for end users to edit backupstorages.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backupstorage-editor-role
+  labels:
+    {{- include "backup-operator.labels" $ | nindent 4 }}
+rules:
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupstorages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupstorages/status
+  verbs:
+  - get
+{{- end -}}

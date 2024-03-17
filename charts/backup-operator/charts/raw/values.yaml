@@ -1,0 +1,82 @@
+# You can place any kubectl manifest here
+# chart will insert proper .metadata.labels and apply
+
+nameOverride: ""
+fullnameOverride: ""
+extraLabels: {}
+extraSelectorLabels: {}
+
+rawTemplatedRegex: "(_tpl|-tpl|_templated|-templated)$"
+raw: {}
+  # # All documents with key that match rawTemplatedRegex will be templated with $ as a context
+  # Pod_tpl:
+  #   apiVersion: v1
+  #   kind: Pod
+  #   metadata:
+  #     name: kubectl
+  #   spec:
+  #     restartPolicy: "Never"
+  #     containers:
+  #     - name: main
+  #       # You may need to surround your templates with {{` `}} like this
+  #       # in order not to conflict with Helm or Helmfile on upper levels
+  #       # {{`
+  #       image: '{{ printf "bitnami/kubectl:%s.%s" .Capabilities.KubeVersion.Major .Capabilities.KubeVersion.Minor }}'
+  #       # `}}
+
+  # # This one is templated, but we pass it as string, because want to use raw's includes
+  # # Note: you have to use $ in all includes if you want to be on the root of values 
+  # DaemonSet_templated: |-
+  #   apiVersion: apps/v1
+  #   kind: DaemonSet
+  #   metadata:
+  #     name: node-local-dns
+  #     namespace: kube-system
+  #     labels:
+  #       {{- include "raw.labels" $ | nindent 6 }}
+  #   spec:
+  #     updateStrategy:
+  #       rollingUpdate:
+  #         maxUnavailable: 10%
+  #     selector:
+  #       matchLabels:
+  #         {{- include "raw.selectorLabels" $ | nindent 8 }}
+  #     template:
+  #       metadata:
+  #         labels:
+  #           {{- include "raw.selectorLabels" $ | nindent 10 }}
+  #         annotations:
+  #           prometheus.io/port: "9253"
+  #           prometheus.io/scrape: "true"
+  #       spec:
+  #         containers:
+  #         - name: node-cache
+  #           image: registry.k8s.io/dns/k8s-dns-node-cache:1.22.23
+
+  # # Ingress object won't be templated, because it does not have rawTemplatedRegex suffix
+  # Ingress:
+  #   apiVersion: networking.k8s.io/v1
+  #   kind: Ingress
+  #   metadata:
+  #     annotations:
+  #       external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+  #       external-dns.alpha.kubernetes.io/hostname: mailu.example.com
+  #       external-dns.alpha.kubernetes.io/ttl: "1"
+  #     name: mailu
+  #     namespace: application
+  #   spec:
+  #     ingressClassName: haproxy
+  #     rules:
+  #     - host: mailu.example.com
+  #       http:
+  #         paths:
+  #         - backend:
+  #             service:
+  #               name: mailu-front
+  #               port:
+  #                 name: https
+  #           path: /
+  #           pathType: Prefix
+  #     tls:
+  #     - hosts:
+  #       - mailu.example.com

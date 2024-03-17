@@ -1,0 +1,20 @@
+{{ if .Values.metrics.enabled | and .Values.metrics.serviceMonitor.create }}
+# Prometheus Monitor Service (Metrics)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "backup-operator.fullname" $ }}
+  labels:
+    {{- include "backup-operator.labels" $ | nindent 4 }}
+spec:
+  endpoints:
+    - path: /metrics
+      port: metrics
+      scheme: http
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+  selector:
+    matchLabels:
+      {{- include "backup-operator.labels" $ | nindent 6 }}
+{{- end -}}

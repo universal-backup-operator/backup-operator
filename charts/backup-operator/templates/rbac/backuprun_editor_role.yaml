@@ -1,0 +1,28 @@
+{{- if .Values.rbac.create }}
+# permissions for end users to edit backupruns.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backuprun-editor-role
+  labels:
+    {{- include "backup-operator.labels" $ | nindent 4 }}
+rules:
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupruns
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupruns/status
+  verbs:
+  - get
+{{- end -}}

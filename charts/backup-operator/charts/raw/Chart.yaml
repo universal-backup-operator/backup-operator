@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 3.0.0
+description: Creates resources from raw manifests
+name: raw
+type: application
+version: 3.0.0

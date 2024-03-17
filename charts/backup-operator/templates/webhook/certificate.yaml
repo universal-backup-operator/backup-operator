@@ -1,0 +1,24 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "backup-operator.webhookCertificateName" . }}
+  labels:
+    {{- include "backup-operator.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "backup-operator.webhookCertificateName" . }}
+  labels:
+    {{- include "backup-operator.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+  {{- $name := include "backup-operator.fullname" . }}
+  - {{ printf "%s.%s.svc" $name .Release.Namespace | quote }}
+  - {{ printf "%s.%s.svc.%s" $name .Release.Namespace .Values.clusterDomain | quote }}
+  issuerRef:
+    kind: Issuer
+    name: {{ include "backup-operator.webhookCertificateName" . }}
+  secretName: {{ include "backup-operator.webhookCertificateName" . }}
