@@ -9,7 +9,7 @@ theme:
   favicon: assets/icon.png
   icon:
     repo: fontawesome/brands/github
-    edit: material/pencil 
+    edit: material/pencil
     view: material/eye
   features:
     - content.action.edit
@@ -21,20 +21,51 @@ theme:
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.expand
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+
   font:
-    code: Roboto
+    text: Roboto
+    code: Roboto Mono
   palette:
     primary: blue grey
     accent: orange
 
 plugins:
-- search
-- git-authors
-- git-revision-date-localized:
-    enable_creation_date: true
-    fallback_to_build_date: true
+  - search
+  - git-authors
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
 
 extra:
   analytics:
     provider: google
     property: G-EJCXGQ3MDR
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+nav:
+  - Introduction: index.md
+  - Reference:
+      - BackupStorage: reference/storage.md
+      - BackupSchedule: reference/schedule.md
+      - BackupRun: reference/run.md
+  - Examples:
+      - Compression: examples/compression.md
+      - Encryption: examples/encryption.md
+      - Restoration: examples/restoration.md
+      - Moving data: examples/moving-data.md
+      - Handling errors: examples/handing-errors.md
+  - Snippets:
+      - MySQL: snippets/mysql.md
+      - PostgreSQL: snippets/postgresql.md
+      - Kubernetes: snippets/kubernetes.md
