@@ -1,0 +1,6 @@
+repositoryID: backup-operator
+owners:
+- name: universal-backup-operator
+  email: admin@backup-operator.io
+- name: Yurii Vlasov
+  email: yurii@vlasov.pro
