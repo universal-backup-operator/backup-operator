@@ -1,0 +1,39 @@
+apiVersion: backup-operator.io/v1
+kind: BackupStorage
+metadata:
+  labels:
+    app.kubernetes.io/name: backupstorage
+    app.kubernetes.io/instance: backupstorage-sample
+    app.kubernetes.io/part-of: backup-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: backup-operator
+  name: backupstorage-sample
+spec:
+  # Type of backups storage provider to use
+  type: s3
+  # You may examine controllers/backupStorage/providers/*.go for list of available providers
+  # Parameters are referenced from Constructor
+  parameters:
+    # Name of key in the secret that will contain AWS_ACCESS_KEY_ID
+    accessKey: access
+    # Name of key in the secret that will contain AWS_SECRET_ACCESS_KEY
+    secretKey: secret
+    # Region is optional, defaults to us-east-1
+    # region: us-east-1
+    # Name of the bucket
+    bucket: backups
+    # Endpoint is optional
+    # We plan to use minio so we have to override the endpoint
+    endpoint: http://minio.default:9000
+    # insecure is optional
+    # We do not have TLS
+    insecure: 'true'
+    # s3ForcePathStyle is optional
+    # Minio requires this one as well
+    s3ForcePathStyle: 'true'
+  # Reference to Secret that contain credentials
+  # If respective provider needs several secret/credentials values
+  # They have to be set in this one secret all together
+  credentials:
+    name: backupstorage-sample
+    namespace: default

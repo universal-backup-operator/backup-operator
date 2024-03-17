@@ -1,0 +1,24 @@
+{{- if .Values.rbac.create }}
+# permissions for end users to view backupstorages.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backupstorage-viewer-role
+  labels:
+    {{- include "backup-operator.labels" $ | nindent 4 }}
+rules:
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupstorages
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupstorages/status
+  verbs:
+  - get
+{{- end -}}

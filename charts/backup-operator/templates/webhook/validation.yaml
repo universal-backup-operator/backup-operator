@@ -1,0 +1,56 @@
+{{- $name := include "backup-operator.fullname" . }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ $name | printf "%s-validation" | trunc 63 | trimSuffix "-" }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ include "backup-operator.webhookCertificateName" . | printf "%s/%s" .Release.Namespace }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service: &service
+      name: {{ $name }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-backup-operator-io-v1-backuprun
+  failurePolicy: Fail
+  name: vbackuprun.kb.io
+  rules:
+  - &rule
+    apiGroups:
+    - backup-operator.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - backupruns
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      <<: *service
+      path: /validate-backup-operator-io-v1-backupschedule
+  failurePolicy: Fail
+  name: vbackupschedule.kb.io
+  rules:
+  - <<: *rule
+    resources:
+    - backupschedules
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      <<: *service
+      path: /validate-backup-operator-io-v1-backupstorage
+  failurePolicy: Fail
+  name: vbackupstorage.kb.io
+  rules:
+  - <<: *rule
+    resources:
+    - backupstorages
+  sideEffects: None

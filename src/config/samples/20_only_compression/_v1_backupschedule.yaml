@@ -1,0 +1,77 @@
+apiVersion: backup-operator.io/v1
+kind: BackupSchedule
+metadata:
+  labels:
+    app.kubernetes.io/name: backupschedule
+    app.kubernetes.io/instance: backupschedule-sample
+    app.kubernetes.io/part-of: backup-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: backup-operator
+  name: only-compression
+spec:
+  # Cron schedule to make BackupRuns according to
+  schedule: "* * * * *"
+  # These three below are taken from standard CronJob and works the same
+  concurrencyPolicy: Replace
+  successfulRunsHistoryLimit: 3
+  failedRunsHistoryLimit: 3
+  ## This is a BackupRun spec part
+  template:
+    # Optionally you can setup custom labels and annotations for BackupRun object
+    metadata:
+      labels:
+        custom: label
+      annotations:
+        and: annotation
+    spec:
+      # Retain controls whether backup will be deleted from storage on BackupRun removal
+      retainPolicy: Delete
+      storage:
+        # Name of BackupStorage resource
+        name: backupstorage-sample
+        # Sprig templated string that must produce a valid path to result backup file in storage
+        # See http://masterminds.github.io/sprig/.
+        path: /mysql/20-{{ now | date "2006.01.02-15:04:05" }}.sql.gz
+      compression:
+        # Compression block is optional
+        algorithm: gzip
+        level: 9
+      # Command for pod exec for making a backup
+      backup:
+        # It must complete in 5 minutes (deadline is optional)
+        deadlineSeconds: 300
+        # Name of pod container that we use as a target for pod exec
+        container: mysql
+        command: ["/bin/sh", "-c"]
+        args:
+        # Backup must be streamed to STDOUT
+        - mysqldump -h mysql.default -u mysql "-p${MYSQL_PASSWORD}" default
+      # Command for pod exec for making a restoration. This one is optional.
+      restore:
+        deadlineSeconds: 300
+        container: mysql
+        command: ["/bin/sh", "-c"]
+        args:
+        # Backup data will be passed to STDIN
+        - mysql -h mysql.default -u mysql "-p${MYSQL_PASSWORD}" default
+      template:
+        # Optionally you can setup custom labels and annotations for Pod
+        metadata:
+          labels:
+            custom: label
+          annotations:
+            and: annotation
+        # Standard Pod spec
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: mysql
+            image: docker.io/bitnami/mysql:8.0.34-debian-11-r75
+            command: ["sleep", "1d"]
+            env:
+            # If you need any secrets - mount them yourself
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql
+                  key: mysql-password

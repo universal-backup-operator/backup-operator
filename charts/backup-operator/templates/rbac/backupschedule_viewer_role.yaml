@@ -1,0 +1,24 @@
+{{- if .Values.rbac.create }}
+# permissions for end users to view backupschedules.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backupschedule-viewer-role
+  labels:
+    {{- include "backup-operator.labels" $ | nindent 4 }}
+rules:
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupschedules
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - backup-operator.io
+  resources:
+  - backupschedules/status
+  verbs:
+  - get
+{{- end -}}
