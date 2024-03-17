@@ -1,6 +1,0 @@
-dependencies:
-- name: raw
-  repository: oci://309460064529.dkr.ecr.eu-central-1.amazonaws.com/helm
-  version: 3.0.0
-digest: sha256:47daf0145059af09ac9193a8ef4e83c3e7f16ab8a1ce210b61663225d57db941
-generated: "2023-12-01T12:16:55.83997234+02:00"

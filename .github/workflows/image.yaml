@@ -6,10 +6,8 @@ name: Image
 
 on:
   push:
-    branches:
-      - "**"
     tags:
-      - "v*.*.*"
+      - "v*"
   pull_request:
     branches:
       - "main"

@@ -6,7 +6,7 @@ replicaCount: 1
 clusterDomain: cluster.local
 
 image:
-  repository: 309460064529.dkr.ecr.eu-central-1.amazonaws.com/backup-operator
+  repository: ghcr.io/universal-backup-operator/backup-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
