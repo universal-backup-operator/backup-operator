@@ -56,7 +56,7 @@ jobs:
 
       - name: Install crdoc
         run: >-
-          curl -sSLo- https://github.com/fybrik/crdoc/releases/download/v0.6.3/crdoc_Linux_arm64.tar.gz |
+          curl -sSLo- https://github.com/fybrik/crdoc/releases/download/v0.6.3/crdoc_Linux_x86_64.tar.gz |
           tar -xpzvf - crdoc &&
           chmod 0755 crdoc
 
