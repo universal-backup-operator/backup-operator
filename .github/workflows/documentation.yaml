@@ -46,9 +46,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: 3.x
-    
-      - name: Install Go
-        uses: actions/setup-go@v5
 
       - name: Install mkdocs
         run: >-
@@ -58,10 +55,13 @@ jobs:
           mkdocs-git-authors-plugin
 
       - name: Install crdoc
-        run: go install fybrik.io/crdoc@v0.6.3
+        run: >-
+          curl -sSLo- https://github.com/fybrik/crdoc/releases/download/v0.6.3/crdoc_Linux_arm64.tar.gz |
+          tar -xpzvf - crdoc &&
+          chmod 0755 crdoc
 
       - name: Generate CRD markdown
-        run: crdoc --resources src/config/crd/bases --output docs/crd.md
+        run: ./crdoc --resources src/config/crd/bases --output docs/crd.md
 
       - name: Build mkdocs
         run: mkdocs build
