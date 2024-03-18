@@ -60,11 +60,11 @@ jobs:
       - name: Install crdoc
         run: go install fybrik.io/crdoc@v0.6.3
 
-      - name: Build mkdocs
-        run: mkdocs build
-      
       - name: Generate CRD markdown
         run: crdoc --resources src/config/crd/bases --output docs/crd.md
+
+      - name: Build mkdocs
+        run: mkdocs build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
