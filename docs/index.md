@@ -2,7 +2,7 @@
 
 The operator allows you to create a simple schedule and/or manually initiate *BackupRuns* to back up or restore any data you need. You define the script for backup and restoration yourself, while the operator takes care of compression, encryption, rotation, and storage.
 
-![Introduction diagram](../assets/diagrams/introduction.png)
+![Introduction diagram](assets/diagrams/introduction.png)
 
 ## Concept
 
