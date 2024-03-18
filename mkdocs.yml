@@ -24,6 +24,7 @@ theme:
     - content.code.copy
     - content.code.select
     - content.code.annotate
+    - toc.integrate
 
   font:
     text: Roboto
@@ -52,22 +53,3 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
-
-nav:
-  - Introduction:
-      - Overview: introduction/index.md
-      - Getting started: introduction/getting-started.md
-  - Reference:
-      - BackupStorage: reference/storage.md
-      - BackupSchedule: reference/schedule.md
-      - BackupRun: reference/run.md
-  - Examples:
-      - Compression: examples/compression.md
-      - Encryption: examples/encryption.md
-      - Restoration: examples/restoration.md
-      - Moving data: examples/moving-data.md
-      - Handling errors: examples/handing-errors.md
-  - Snippets:
-      - MySQL: snippets/mysql.md
-      - PostgreSQL: snippets/postgresql.md
-      - Kubernetes: snippets/kubernetes.md
