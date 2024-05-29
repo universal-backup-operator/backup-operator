@@ -1,0 +1,106 @@
+version: '3'
+
+env:
+  KUBECONFIG: kubeconfig.yaml
+vars:
+  clusterName: backup-operator
+  clusterConfig: |-
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    containerdConfigPatches:
+      - |-
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["http://registry-mirror:5000"]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.local"]
+          endpoint = ["http://registry-local:5000"]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-mirror:5000".tls]
+          insecure_skip_verify = true
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-local:5000".tls]
+          insecure_skip_verify = true 
+    nodes:
+    - role: control-plane
+      extraPortMappings:
+      - containerPort: 30000
+        hostPort: 9000
+        listenAddress: "127.0.0.1"
+      - containerPort: 30001
+        hostPort: 9001
+        listenAddress: "127.0.0.1"
+      - containerPort: 30002
+        hostPort: 9002
+        listenAddress: "127.0.0.1"
+tasks:
+  kind:create:
+    desc: Create a KIND cluster and run caching and local registries
+    cmds:
+    - >-
+        docker run -d --name registry-mirror --net=kind
+        -v registry-mirror:/var/lib/registry --restart=always
+        -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io
+        registry:2
+    - >-
+        docker run -d --name registry-local --net=kind
+        -v registry-local:/var/lib/registry --restart=always
+        -p 127.0.0.1:5000:5000 registry:2
+    - cmd: echo {{ b64enc .clusterConfig }} | base64 -d > kind-config
+      silent: true
+    - defer: rm -f kind-config
+      silent: true
+    - kind create cluster --name {{ .clusterName }} --config kind-config
+    - kind export kubeconfig --name {{ .clusterName }} --kubeconfig "${KUBECONFIG}"
+    - chmod 0600 "${KUBECONFIG}"
+    - kubectl config set-context --current --namespace=default
+    - flux install
+    - kubectl apply --server-side -k flux
+
+  kind:delete:
+    desc: Delete the KIND cluster and stop registries
+    cmds:
+    - kind delete cluster --name {{ .clusterName }}
+    - rm -f "${KUBECONFIG}"
+    - cmd: docker rm -f registry-mirror registry-local
+      ignore_error: true
+  
+  chart:run:
+    desc: Run backup-operator from chart
+    cmds:
+    - task: chart:push
+    - task: image:push
+    - flux -n default resume helmrelease backup-operator
+    - kubectl rollout restart deploy backup-operator
+    - flux -n default reconcile helmrelease backup-operator --reset --timeout 1m
+
+  chart:push:
+    desc: Package and push chart to the ChartMuseum
+    cmds:
+    - helm package -u ../charts/backup-operator
+    - >-
+      find . -mindepth 1 -maxdepth 1 -name 'backup-operator-*.tgz' |
+      xargs printf "@%s" |
+      xargs -I% curl --data-binary % http://localhost:9002/api/charts
+    - flux -n default reconcile source helm chartmuseum
+
+  image:push:
+    desc: Build and push an image to registry
+    cmds:
+    - make docker-build docker-push
+
+  crds:install:
+    desc: Generate and install CRDs
+    cmds:
+    - make manifests generate install fmt vet
+
+  go:run:
+    desc: Run backup-operator locally
+    env:
+      ENABLE_WEBHOOKS: "false"
+    cmds:
+    - make run
+
+  clean:
+    desc: Remove registries data volumes
+    prompt: This will remove all cached registries Docker images... Do you want to continue?
+    cmds:
+    - task: delete
+    - cmd: docker volume rm registry-mirror registry-local
+      ignore_error: true

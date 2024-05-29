@@ -1,8 +1,8 @@
 version: '3'
 
 tasks:
-  # Install required mkdocs python packages
   install:
+    desc: Install mkdocs and required plugins
     cmds:
       - >-
         pip install --upgrade
@@ -11,9 +11,11 @@ tasks:
         mkdocs-git-authors-plugin
 
   build:
+    desc: Build mkdocs site
     cmds:
     - mkdocs build
 
   serve:
+    desc: Serve mkdocs on 127.0.0.1:8000
     cmds:
     - mkdocs serve

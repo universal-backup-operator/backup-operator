@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: backup-operator
+spec:
+  releaseName: backup-operator
+  suspend: true
+  interval: 1m
+  timeout: 1m
+  dependsOn:
+  - name: cert-manager
+  - name: minio
+  - name: mysql
+  chart:
+    spec:
+      chart: backup-operator
+      sourceRef:
+        kind: HelmRepository
+        name: chartmuseum
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    nameOverride: backup-operator
+    fullnameOverride: backup-operator
+    image:
+      repository: registry.local/backup-operator
+      pullPolicy: Always
+      tag: latest
+    extraArgs: ["-zap-devel"]

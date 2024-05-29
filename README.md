@@ -16,54 +16,38 @@ Look for files named *annotations.go* across sources. It is guaranteed that you 
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
-If you already have KIND installed, you can easily create and delete cluster using env.sh.
+If you already have KIND installed, you can easily create and delete cluster using [task](https://taskfile.dev).
 
 ```shell
-. ./env.sh
-kind_create # to create the cluster
-kind_delete # to remove it 
+task src:create
 ```
 
-After you run kind_create, kubeconfig.yaml will be created in current directory. KUBECONFIG environment variable is already populated from the same env.sh.
-
-Next, you will need [Helmfile](https://helmfile.readthedocs.io/en/latest/#installation) to launch simple Minio (S3 storage) and MySQL (database we will backup). These are described in [helmfile.yaml](helmfile.yaml). Also, please install [kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/).
-
-It will make Minio published on `localhost:9000` and registry on `localhost:5000`, so please, make sure these ports are available. Use helmfile to deploy the stack.
+Here you will find other tasks available
 
 ```shell
-helmfile apply
+task --list-all
 ```
+
+After you run kind_create, kubeconfig.yaml will be created in current directory.
+
+Minio will be published on `localhost:9000` (S3 API) and `localhost:9001` (Web UI). Local Docker registry will be published on `localhost:5000`. Make sure these ports are available on localhost.
 
 Now, you can install CRDs.
 
 ```shell
-make manifests generate install fmt vet
-```
-
-Now do not forget to port-forward minio if you want to launch operator locally, so it will be able to reach minio via localhost.
-
-```shell
-nohup kubectl port-forward -n default svc/minio 9000:9000 1>/dev/null 2>&1 &
+task crds:install
 ```
 
 Now you can either launch the application with go (but without webhooks)...
 
 ```shell
-export ENABLE_WEBHOOKS=false
-make run
+task go:run
 ```
 
 ...or deploy it to the kind cluster.
-First, let's build it and push to the registry.
 
 ```shell
-make docker-build docker-push
-```
-
-Next, to unblock it in , you will have to set operator=true in Helmfile environment values to unblock its installation.
-
-```shell
-helmfile apply --skip-deps --state-values-set operator=true
+task chart:run
 ```
 
 Once both database and storage are ready, continue with deploying our CRD. Check [samples](config/samples/_v1_backupschedule.yaml) for more details.
