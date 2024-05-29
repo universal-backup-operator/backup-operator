@@ -1,21 +1,18 @@
-version: '3'
+version: "3"
 
 tasks:
   install:
     desc: Install mkdocs and required plugins
     cmds:
-      - >-
-        pip install --upgrade
-        mkdocs-material
-        mkdocs-git-revision-date-localized-plugin
-        mkdocs-git-authors-plugin
+      - python3 -m pip install --upgrade mkdocs-material
+      - mkdocs get-deps | xargs python3 -m pip install --upgrade
 
   build:
     desc: Build mkdocs site
     cmds:
-    - mkdocs build
+      - mkdocs build
 
   serve:
     desc: Serve mkdocs on 127.0.0.1:8000
     cmds:
-    - mkdocs serve
+      - mkdocs serve
