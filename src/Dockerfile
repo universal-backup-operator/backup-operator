@@ -1,6 +1,6 @@
 #checkov:skip=CKV_DOCKER_2: HEALTHCHECK is ignored by Kubernetes
 # Build the manager binary
-FROM golang:1.21.4 as builder
+FROM golang:1.21.4 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 

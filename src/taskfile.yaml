@@ -85,10 +85,17 @@ tasks:
     cmds:
       - make docker-build docker-push
 
+  build:
+    desc: Install all deps and build the project
+    cmds:
+      - go mod tidy
+      - make manifests generate fmt vet
+
   crds:install:
     desc: Generate and install CRDs
     cmds:
-      - make manifests generate install fmt vet
+      - task: build
+      - make install
 
   go:run:
     desc: Run backup-operator locally
