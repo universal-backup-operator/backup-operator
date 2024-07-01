@@ -1,10 +1,22 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+- flux-system.yaml
 - helm-repositories.yaml
-- metrics-server.yaml
-- cert-manager.yaml
 - mysql.yaml
 - minio.yaml
 - chartmuseum.yaml
-- backup-operator.yaml
+- https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+- https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+- https://github.com/prometheus-operator/prometheus-operator/releases/latest/download/stripped-down-crds.yaml
+- victoria-metrics.yaml
+- backup-operator.yaml # It is suspended by default
+
+patches:
+- patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/args/-
+      value: --kubelet-insecure-tls
+  target:
+    kind: Deployment
+    name: metrics-server

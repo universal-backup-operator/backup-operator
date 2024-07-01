@@ -30,25 +30,47 @@ task --list-all
 
 After you run kind_create, kubeconfig.yaml will be created in current directory.
 
-Minio will be published on `localhost:9000` (S3 API) and `localhost:9001` (Web UI). Local Docker registry will be published on `localhost:5000`. Make sure these ports are available on localhost.
+Ports Map
+
+Service | Port
+--- | ---
+Minio (S3 API) | 9000
+Minio (Web UI) | 9001
+Chart Museum | 9002
+Grafana | 9003
+Docker Registry | 5000
+
+## Running the operator
+
+Choose one of the options below.
+
+### 1. Installing from manifests
+
+```shell
+task src:manifest:run
+```
+
+### 2. Running Go locally
 
 Now, you can install CRDs.
 
 ```shell
-task crds:install
+task src:crds:install
 ```
 
 Now you can either launch the application with go (but without webhooks)...
 
 ```shell
-task go:run
+task src:go:run
 ```
 
-...or deploy it to the kind cluster.
+### 3. Deploying in Helm chart
 
 ```shell
-task chart:run
+task src:chart:run
 ```
+
+## Examples
 
 Once both database and storage are ready, continue with deploying our CRD. Check [samples](config/samples/_v1_backupschedule.yaml) for more details.
 
