@@ -1,43 +1,27 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: metrics-server
+  name: cert-manager
 spec:
-  releaseName: metrics-server
+  releaseName: cert-manager
   interval: 1h0m0s
   timeout: 5m
   chart:
     spec:
-      chart: metrics-server
-      version: '<7.0.0'
+      chart: cert-manager
+      version: v1.14.2
       sourceRef:
         kind: HelmRepository
-        name: bitnami
+        name: jetstack
   install:
     crds: CreateReplace
   upgrade:
     crds: CreateReplace
   values:
-    nameOverride: metrics-server
-    fullnameOverride: metrics-server
-    extraArgs:
-      - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
-      - --metric-resolution=15s
-      - --kubelet-insecure-tls
-    apiService:
-      create: true
-    resources:
-      limits:
-        memory: 75Mi
-      requests:
-        cpu: 50m
-        memory: 75Mi
-    podSecurityContext:
-      enabled: true
-    containerSecurityContext:
-      enabled: true
-      readOnlyRootFilesystem: false
-      runAsNonRoot: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
+    installCRDs: true
+    nameOverride: cert-manager
+    fullnameOverride: cert-manager
+    replicaCount: 1
+    enableCertificateOwnerRef: true
+    prometheus:
+      enabled: false
