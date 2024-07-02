@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -89,13 +88,6 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 		log.V(1).Info("could not fetch an object")
 		return
 	}
-	// Get owner BackupSchedule
-	// Check that ownership is set
-	owner := metav1.GetControllerOf(run)
-	if owner != nil && (owner.APIVersion != backupoperatoriov1.GroupVersion.String() ||
-		owner.Kind != "BackupSchedule") {
-		return result, fmt.Errorf("wrong owner kind: %s", owner.Kind)
-	}
 	// Setting up different flag conditions
 	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
@@ -126,8 +118,16 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 		// Create respective conditions
 		run.Status.Conditions = *utils.AddConditions(run.Status.Conditions,
 			metav1.Condition{
+				Type:               string(backupoperatoriov1.BackupRunConditionTypeNeverRun),
+				Status:             utils.ToConditionStatus(&state.NeverRun),
+				Reason:             utils.EventReasonCreated,
+				Message:            utils.EventReasonCreated,
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: run.Generation,
+			},
+			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeInProgress),
-				Status:             metav1.ConditionFalse,
+				Status:             utils.ToConditionStatus(&state.InProgress),
 				Reason:             utils.EventReasonCreated,
 				Message:            utils.EventReasonCreated,
 				LastTransitionTime: metav1.Now(),
@@ -135,7 +135,7 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeFailed),
-				Status:             metav1.ConditionFalse,
+				Status:             utils.ToConditionStatus(&state.Failed),
 				Reason:             utils.EventReasonCreated,
 				Message:            utils.EventReasonCreated,
 				LastTransitionTime: metav1.Now(),
@@ -143,7 +143,7 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeSuccessful),
-				Status:             metav1.ConditionFalse,
+				Status:             utils.ToConditionStatus(&state.Successful),
 				Reason:             utils.EventReasonCreated,
 				Message:            utils.EventReasonCreated,
 				LastTransitionTime: metav1.Now(),
@@ -180,21 +180,9 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 		return
 	}
 	// Finish initialization
-	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
-			return err
-		}
-		run.Status.Conditions = *utils.AddOrUpdateConditions(run.Status.Conditions, metav1.Condition{
-			Type:               string(backupoperatoriov1.BackupRunConditionTypeReconciled),
-			Status:             metav1.ConditionTrue,
-			Reason:             "Constructed",
-			Message:            "Executed constructor",
-			LastTransitionTime: metav1.Now(),
-		})
-		return r.Client.Status().Update(ctx, run)
-	}); err != nil {
-		return
-	}
+	r.Recorder.Eventf(run, corev1.EventTypeNormal, "Reconciled", "Successfully reconciled")
+	// Update metrics
+	backuprun.UpdateMetricsStatus(run)
 	return
 }
 
@@ -211,16 +199,11 @@ func (b *backupRunLifecycle) Destructor(ctx context.Context, r *utils.ManagedLif
 		return
 	}
 	log.V(1).Info("starting run deletion")
-	// Check current backup status
-	var inProgress bool
-	for _, c := range run.Status.Conditions {
-		switch c.Type {
-		case string(backupoperatoriov1.BackupRunConditionTypeInProgress):
-			inProgress = c.Status == metav1.ConditionTrue
-		}
-	}
+	// Update metrics
+	run.Status.State = ptr.To("Deleted")
+	backuprun.UpdateMetricsStatus(run)
 	// Delete backup from storage...
-	if *run.Spec.RetainPolicy == backupoperatoriov1.BackupRetainDelete && !inProgress {
+	if *run.Spec.RetainPolicy == backupoperatoriov1.BackupRetainDelete {
 		// ...if retain is set to Delete
 		log.V(1).Info("trying to delete backup from storage according to spec.retainPolicy=Delete")
 		var storage backupstorage.BackupStorageProvider
@@ -295,7 +278,7 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	defer func() {
 		log.V(1).Info("deleting run pod")
 		if err = r.Client.Delete(ctx, pod, &client.DeleteOptions{
-			PropagationPolicy: ptr.To[metav1.DeletionPropagation](metav1.DeletePropagationForeground),
+			PropagationPolicy: ptr.To(metav1.DeletePropagationForeground),
 		}); err != nil {
 			log.Error(err, "failed to delete backup run pod at the very end")
 			return

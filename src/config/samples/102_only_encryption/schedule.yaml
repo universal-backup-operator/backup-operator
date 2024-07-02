@@ -1,0 +1,28 @@
+apiVersion: backup-operator.io/v1
+kind: BackupSchedule
+metadata:
+  name: only-encryption
+spec:
+  template:
+    spec:
+      storage:
+        # Sprig templated string that must produce a valid path to result backup file in storage
+        # See http://masterminds.github.io/sprig/.
+        path: /mysql/102-{{ now | date "2006.01.02-15:04:05" }}.sql.age
+      encryption:
+        # Encryption block is optional
+        # Encryption is always performed after the compression if it is enabled
+        # Encrypted with https://github.com/FiloSottile/age
+        recipients:
+        - age1vmk6z84kftwfupt2s38zqf78ft8s7k8khl5wzzhjeglwrndsafnq52msn2 # My key
+        - age1mcuu74eh4gmpnhdxx2tkqdfjyl0gwxefux6w4hyxwzt3lej7qf7qh5cga6 # Sample key
+      # Command for pod exec for making a backup
+      backup:
+        # It must complete in 5 minutes (deadline is optional)
+        deadlineSeconds: 300
+        # Name of pod container that we use as a target for pod exec
+        container: mysql
+        command: ["/bin/sh", "-c"]
+        args:
+        # Backup must be streamed to STDOUT
+        - mysqldump -h mysql.default -u mysql "-p${MYSQL_PASSWORD}" default

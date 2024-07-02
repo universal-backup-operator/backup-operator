@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 /* These are labels and annotation fields from standard metav1.ObjectMeta. */
-type LabelsAndAnnotationsMetadata struct {
+type TemplateMetadata struct {
 	// Map of string keys and values that can be used to organize and categorize
 	// (scope and select) objects. May match selectors of replication controllers
 	// and services.

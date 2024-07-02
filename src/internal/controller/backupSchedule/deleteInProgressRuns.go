@@ -37,7 +37,7 @@ func DeleteInProgressRuns(ctx context.Context, c client.Client, schedule *backup
 		// ...find ones...
 		for _, condition := range run.Status.Conditions {
 			switch condition.Type {
-			case string(backupoperatoriov1.BackupRunConditionTypeInProgress):
+			case string(backupoperatoriov1.BackupRunConditionTypeInProgress), string(backupoperatoriov1.BackupRunConditionTypeNeverRun):
 				// ...that are in progress...
 				if condition.Status == metav1.ConditionTrue {
 					// ...and delete

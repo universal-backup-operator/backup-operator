@@ -70,6 +70,22 @@ type BackupStorageStatus struct {
 	//+kubebuilder:validation:Minimum=0
 	//+kubebuilder:validation:Optional
 	Schedules *uint16 `json:"schedules,omitempty" protobuf:"varint,2,opt,name=schedules"`
+
+	/* Total count of runs. */
+	//+kubebuilder:default=0
+	//+kubebuilder:validation:Minimum=0
+	//+kubebuilder:validation:Optional
+	Runs *uint16 `json:"runs,omitempty" protobuf:"varint,3,opt,name=runs"`
+
+	/* Total occupied size by child BackupRuns. */
+	//+kubebuilder:validation:Optional
+	Size *string `json:"size,omitempty" protobuf:"bytes,4,opt,name=size"`
+
+	/* Same as size, but in bytes. */
+	//+kubebuilder:default=0
+	//+kubebuilder:validation:Minimum=0
+	//+kubebuilder:validation:Optional
+	SizeInBytes *uint `json:"sizeInBytes,omitempty" protobuf:"varint,5,opt,name=sizeInBytes"`
 }
 
 /*
@@ -82,7 +98,9 @@ and upload backups to the place defined in these BackupStorages for long time st
 //+kubebuilder:resource:shortName=bacst;backst;backupst
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`,description="Storage type"
-//+kubebuilder:printcolumn:name="Schedules",type=integer,JSONPath=`.status.schedules`,description="Count of schedules"
+//+kubebuilder:printcolumn:name="Schedules",type=integer,JSONPath=`.status.schedules`,description="Count of child schedules"
+//+kubebuilder:printcolumn:name="Runs",type=integer,JSONPath=`.status.runs`,description="Count of child runs"
+//+kubebuilder:printcolumn:name="Size",type=string,JSONPath=`.status.size`,description="Total occupied storage size",priority=1
 type BackupStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,3,req,name=metadata"`

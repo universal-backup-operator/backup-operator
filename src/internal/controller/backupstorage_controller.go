@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
@@ -160,10 +161,11 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 		// ...and construct provider (for the first time or again, does not matter)
 		if err = provider.Constructor(storage, storage.Spec.Parameters, credentials); err != nil {
 			err = fmt.Errorf("failed to configure provider %s: %s", storage.Spec.Type, err.Error())
+			r.Recorder.Eventf(storage, corev1.EventTypeWarning, utils.EventReasonFailed, err.Error())
 			return
 		}
 		if found || hash != oldHash {
-			r.Recorder.Eventf(storage, corev1.EventTypeNormal, "Reconciled", "Provider has been successfully reconfigured")
+			r.Recorder.Eventf(storage, corev1.EventTypeNormal, utils.EventReasonReconciled, "Provider has been successfully reconfigured")
 		}
 		// ...save hash
 		storageProvidersConfigurationHashes.Store(storage.UID, hash)
@@ -181,7 +183,25 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 			log.V(0).Error(err, "unable to list child schedules")
 			return err
 		}
-		storage.Status.Schedules = ptr.To[uint16](uint16(len(childSchedules.Items)))
+		// List child runs
+		childRuns := &backupoperatoriov1.BackupRunList{}
+		if err = r.List(ctx, childRuns); err != nil {
+			log.V(0).Error(err, "unable to list child schedules")
+			return err
+		}
+		var childRunsCount, childRunsSizeInBytes uint = 0, 0
+		for _, run := range childRuns.Items {
+			if run.Spec.Storage.Name == storage.Name {
+				childRunsCount++
+				if run.Status.SizeInBytes != nil {
+					childRunsSizeInBytes += *run.Status.SizeInBytes
+				}
+			}
+		}
+		storage.Status.Schedules = ptr.To(uint16(len(childSchedules.Items)))
+		storage.Status.Runs = ptr.To(uint16(childRunsCount))
+		storage.Status.SizeInBytes = ptr.To(childRunsSizeInBytes)
+		storage.Status.Size = ptr.To(utils.ConvertBytesToHumanReadable(childRunsSizeInBytes))
 		return r.Client.Status().Update(ctx, storage)
 	}); err != nil {
 		return
@@ -212,6 +232,7 @@ func (r *BackupStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupoperatoriov1.BackupStorage{}).
 		Owns(&backupoperatoriov1.BackupSchedule{}).
+		Watches(&backupoperatoriov1.BackupRun{}, &handler.EnqueueRequestForObject{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
 		WithEventFilter(utils.IgnoreOutOfOrder()).
 		Complete(r)

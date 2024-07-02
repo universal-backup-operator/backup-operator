@@ -150,3 +150,31 @@ func Hash(objects ...interface{}) (result string) {
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+// ConvertBytesToHumanReadable converts a size in bytes to a human-readable string
+// with appropriate binary prefixes (e.g., KiB, MiB, GiB).
+func ConvertBytesToHumanReadable(b uint) (s string) {
+	var size float64
+	var scale uint8
+	size = float64(b)
+	for ; size >= 1024; size /= 1024 {
+		scale++
+	}
+	suffix := map[uint8]string{
+		0: "B",
+		1: "Ki",
+		2: "Mi",
+		3: "Gi",
+		4: "Ti",
+		5: "Pi",
+		6: "Zi",
+	}
+	var format string
+	if size < 10 {
+		format = "%.1f%s"
+	} else {
+		format = "%.0f%s"
+	}
+	s = fmt.Sprintf(format, size, suffix[scale])
+	return
+}

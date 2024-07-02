@@ -18,7 +18,6 @@ package backuprun
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
@@ -26,6 +25,7 @@ import (
 
 	backupoperatoriov1 "backup-operator.io/api/v1"
 	backupstorage "backup-operator.io/internal/controller/backupStorage"
+	"backup-operator.io/internal/controller/utils"
 )
 
 // Update backup size status field
@@ -39,28 +39,8 @@ func SetBackupSizeInStatus(ctx context.Context, c client.Client,
 		if bytes, err = storage.GetSize(ctx, run.Spec.Storage.Path); err != nil {
 			return
 		}
-		var size float64
-		var scale uint8
-		size = float64(bytes)
-		for ; size >= 1024; size /= 1024 {
-			scale++
-		}
-		suffix := map[uint8]string{
-			0: "B",
-			1: "Ki",
-			2: "Mi",
-			3: "Gi",
-			4: "Ti",
-			5: "Pi",
-			6: "Zi",
-		}
-		var format string
-		if size < 10 {
-			format = "%.1f%s"
-		} else {
-			format = "%.0f%s"
-		}
-		run.Status.Size = ptr.To[string](fmt.Sprintf(format, size, suffix[scale]))
+		run.Status.SizeInBytes = ptr.To(bytes)
+		run.Status.Size = ptr.To(utils.ConvertBytesToHumanReadable(bytes))
 		return c.Status().Update(ctx, run)
 	})
 }

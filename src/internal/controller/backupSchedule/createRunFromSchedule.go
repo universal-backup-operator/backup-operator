@@ -54,7 +54,7 @@ func CreateRunFromSchedule(ctx context.Context, c client.Client, s *runtime.Sche
 		if err = c.Get(ctx, client.ObjectKeyFromObject(schedule), schedule); err != nil {
 			return err
 		}
-		schedule.Status.LastScheduleTime = ptr.To[metav1.Time](run.CreationTimestamp)
+		schedule.Status.LastScheduleTime = ptr.To(run.CreationTimestamp)
 		return c.Status().Update(ctx, schedule)
 	})
 	return

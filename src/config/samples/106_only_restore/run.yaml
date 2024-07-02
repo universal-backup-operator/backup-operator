@@ -1,0 +1,17 @@
+apiVersion: backup-operator.io/v1
+kind: BackupRun
+metadata:
+  name: only-restore
+spec:
+  storage:
+    # Sprig templated string that must produce a valid path to result backup file in storage
+    # See http://masterminds.github.io/sprig/.
+    path: /mysql/105-only-backup.sql
+  # Command for pod exec for making a restoration. This one is optional.
+  restore:
+    deadlineSeconds: 300
+    container: mysql
+    command: ["/bin/sh", "-c"]
+    args:
+    # Backup data will be passed to STDIN
+    - mysql -h mysql.default -u mysql "-p${MYSQL_PASSWORD}" default

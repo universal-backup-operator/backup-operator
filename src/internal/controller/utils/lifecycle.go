@@ -18,7 +18,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -114,9 +113,8 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 	if !r.Object.GetDeletionTimestamp().IsZero() {
 		// DELETING
 		// The object is being deleted
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonFinalizing, "deleting")
+		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonFinalizing, "Deleting")
 		if result, err = m.Destructor(ctx, r); err != nil {
-			log.Error(err, "destructor failed")
 			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
 			return
 		}
@@ -130,12 +128,11 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 				controllerutil.RemoveFinalizer(r.Object, finalizer)
 				return r.Client.Update(ctx, r.Object)
 			}); client.IgnoreNotFound(err) != nil {
-				log.Error(err, "error removing finalizer")
 				r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
 				return
 			}
 		}
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonDeleted, "deleted")
+		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonDeleted, "Deleted")
 		// Remove from constructed
 		processed.Delete(r.Object.GetUID())
 		return
@@ -143,7 +140,6 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 	// CREATED or UPDATED
 	// Registering finalizer
 	if !controllerutil.ContainsFinalizer(r.Object, finalizer) {
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonInitializing, "initializing")
 		// Add operator finalizer
 		if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err = r.Client.Get(ctx, client.ObjectKeyFromObject(r.Object), r.Object); err != nil {
@@ -153,22 +149,19 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 			return r.Client.Update(ctx, r.Object)
 		}); err != nil {
 			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s:", err.Error())
-			err = fmt.Errorf("error adding deletion finalizer: %s", err.Error())
 			return
 		}
 	}
 	// Run Constructor callback
 	if !isConstructed {
 		if result, err = m.Constructor(ctx, r); err != nil {
-			log.Error(err, "constructor failed")
 			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
 			return
 		}
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonReconciled, "successfully reconciled")
+		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonReconciled, "Successfully reconciled")
 	}
 	// Run Processor callback
 	if result, err = m.Processor(ctx, r); err != nil {
-		log.Error(err, "processor failed")
 		r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
 		return
 	}

@@ -91,8 +91,7 @@ func (b *backupScheduleLifecycle) Constructor(ctx context.Context, r *utils.Mana
 	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		storage := &backupoperatoriov1.BackupStorage{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      schedule.Spec.Template.Spec.Storage.Name,
-				Namespace: schedule.Namespace,
+				Name: schedule.Spec.Template.Spec.Storage.Name,
 			},
 		}
 		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
@@ -148,7 +147,9 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 			backupoperatoriov1.BackupRunConditionTypeFailed, *schedule.Spec.FailedRunsHistoryLimit); err != nil {
 			return
 		}
-		log.V(1).Info("deleted failed runs above the limit", "count", count)
+		if count > 0 {
+			log.V(1).Info("deleted failed runs above the limit", "count", count)
+		}
 	}
 	if schedule.Spec.SuccessfulRunsHistoryLimit != nil {
 		var count uint16
@@ -156,7 +157,9 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 			backupoperatoriov1.BackupRunConditionTypeSuccessful, *schedule.Spec.SuccessfulRunsHistoryLimit); err != nil {
 			return
 		}
-		log.V(1).Info("deleted successful runs above the limit", "count", count)
+		if count > 0 {
+			log.V(1).Info("deleted successful runs above the limit", "count", count)
+		}
 	}
 	// Figure out the next times that we need to create
 	// runs at (or anything we missed).

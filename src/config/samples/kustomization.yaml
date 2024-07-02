@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+namePrefix: sample-
+resources:
+- storage.yaml
+- 00_broken_no_job
+- 01_broken_wrong_path
+- 02_encryption_lost_restore_key
+- 100_encryption_compression
+- 101_only_compression
+- 102_only_encryption
+- 103_encryption_wtih_restore
+- 104_plain_backup_restore
+- 105_only_backup
+- 106_only_restore
+labels:
+  - pairs:
+      app.kubernetes.io/name: backup-operator-sample
+      app.kubernetes.io/instance: backup-operator-sample
+      app.kubernetes.io/part-of: backup-operator
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/created-by: backup-operator
+    includeSelectors: true
+    includeTemplates: true
+secretGenerator:
+  - name: age
+    literals:
+      # nosemgrep: yaml.kubernetes.security.secrets-in-config-file.secrets-in-config-file
+      - age=AGE-SECRET-KEY-17CCAJ7K87FUY94TKSCHE8YWSK4JQT7E2MSDXMJ3DX63F8Z5XFNZSVE45U3
+  - name: storage
+    literals:
+      - access=minio
+      - secret=miniominio
+generatorOptions:
+  disableNameSuffixHash: true
+replacements:
+  - source:
+      kind: BackupStorage
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: BackupSchedule
+        fieldPaths:
+          - spec.template.spec.storage.name
+        options:
+          create: true
+      - select:
+          kind: BackupRun
+        fieldPaths:
+          - spec.storage.name
+        options:
+          create: true
+components:
+- patches

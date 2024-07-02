@@ -31,9 +31,6 @@ import (
 func DeleteRunsAboveTheLimit(ctx context.Context, c client.Client, schedule *backupoperatoriov1.BackupSchedule,
 	ct backupoperatoriov1.BackupRunConditionType, limit uint16) (count uint16, err error) {
 	count = 0
-	if limit == 0 {
-		return
-	}
 	// Get all child runs...
 	childRuns := &backupoperatoriov1.BackupRunList{}
 	if err = c.List(ctx, childRuns, client.InNamespace(schedule.Namespace),
@@ -52,7 +49,7 @@ func DeleteRunsAboveTheLimit(ctx context.Context, c client.Client, schedule *bac
 	}
 	// Initial length
 	l := len(runs)
-	if l > 0 && limit > 0 && uint16(l) >= limit {
+	if l > 0 && uint16(l) >= limit {
 		// Sort runs by time
 		sort.Slice(runs, func(i, j int) bool {
 			return (runs)[i].GetCreationTimestamp().UTC().Before((runs)[j].GetCreationTimestamp().UTC())

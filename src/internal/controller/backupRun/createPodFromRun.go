@@ -39,7 +39,7 @@ func CreatePodFromRun(ctx context.Context, c client.Client, s *runtime.Scheme,
 	// Delete run Pod if it exists
 	if err = c.Delete(ctx, pod.DeepCopy(), &client.DeleteOptions{
 		GracePeriodSeconds: ptr.To[int64](0),
-		PropagationPolicy:  ptr.To[metav1.DeletionPropagation](metav1.DeletePropagationBackground),
+		PropagationPolicy:  ptr.To(metav1.DeletePropagationBackground),
 	}); client.IgnoreNotFound(err) != nil {
 		return
 	}

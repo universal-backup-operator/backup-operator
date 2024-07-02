@@ -157,7 +157,7 @@ type backupEncryption struct {
 type pod struct {
 	/* Backup Pod custom metadata. */
 	//+kubebuilder:validation:Optional
-	Metadata *LabelsAndAnnotationsMetadata `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Metadata *TemplateMetadata `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	/* Backup Pod custom specification. */
 	Spec corev1.PodSpec `json:"spec" protobuf:"bytes,2,req,name=spec"`
@@ -167,8 +167,8 @@ type pod struct {
 type BackupRunConditionType string
 
 const (
-	// Last reconciliation
-	BackupRunConditionTypeReconciled BackupRunConditionType = "Reconciled"
+	// Backup or restoration has been never run
+	BackupRunConditionTypeNeverRun BackupRunConditionType = "NeverRun"
 	// Backup is in progress
 	BackupRunConditionTypeInProgress BackupRunConditionType = "InProgress"
 	// Backup has finished successfully
@@ -198,8 +198,7 @@ type BackupRunStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	/* Current of the Pod that has been launched. */
-	//+kubebuilder:default="Initializing"
-	//+kubebuilder:validation:MinLength=1
+	//+kubebuilder:default=""
 	//+kubebuilder:validation:Optional
 	State *string `json:"state,omitempty" protobuf:"bytes,2,opt,name=state"`
 
@@ -211,6 +210,12 @@ type BackupRunStatus struct {
 	/* Result backup file size. */
 	//+kubebuilder:validation:Optional
 	Size *string `json:"size,omitempty" protobuf:"bytes,4,opt,name=size"`
+
+	/* Same as size, but in bytes. */
+	//+kubebuilder:default=0
+	//+kubebuilder:validation:Minimum=0
+	//+kubebuilder:validation:Optional
+	SizeInBytes *uint `json:"sizeInBytes,omitempty" protobuf:"varint,5,opt,name=sizeInBytes"`
 }
 
 /*

@@ -51,15 +51,15 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			case state.HaveToBackup:
 				reason = "Backuping"
 				message = "Making a backup"
-				run.Status.State = ptr.To[string]("Backuping")
+				run.Status.State = ptr.To("Backuping")
 			case state.HaveToRestore:
 				reason = "Restoring"
 				message = "Restoring the backup"
-				run.Status.State = ptr.To[string]("Restoring")
+				run.Status.State = ptr.To("Restoring")
 			default:
 				reason = "Unknown"
 				message = string(ct)
-				run.Status.State = ptr.To[string]("Unknown")
+				run.Status.State = ptr.To("Unknown")
 			}
 		case backupoperatoriov1.BackupRunConditionTypeFailed:
 			inProgress = metav1.ConditionFalse
@@ -69,19 +69,19 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			case state.HaveToBackup:
 				reason = "BackupFailed"
 				message = "Backup failed"
-				run.Status.State = ptr.To[string]("BackupFailed")
+				run.Status.State = ptr.To("BackupFailed")
 			case state.HaveToRestore:
 				reason = "RestoreFailed"
 				message = "Restore failed"
-				run.Status.State = ptr.To[string]("RestoreFailed")
+				run.Status.State = ptr.To("RestoreFailed")
 			case state.Interrupted:
 				reason = "Interrupted"
 				message = "Run has been interrupted and considered as failed"
-				run.Status.State = ptr.To[string]("InterruptedFailed")
+				run.Status.State = ptr.To("InterruptedFailed")
 			default:
 				reason = "Unknown"
 				message = string(ct)
-				run.Status.State = ptr.To[string]("Unknown")
+				run.Status.State = ptr.To("Unknown")
 			}
 		case backupoperatoriov1.BackupRunConditionTypeSuccessful:
 			inProgress = metav1.ConditionFalse
@@ -91,21 +91,29 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			case state.HaveToBackup:
 				reason = "BackupSuccessful"
 				message = "Backup successful"
-				run.Status.State = ptr.To[string]("BackupSuccessful")
+				run.Status.State = ptr.To("BackupSuccessful")
 			case state.HaveToRestore:
 				reason = "RestoreSuccessful"
 				message = "Restore successful"
-				run.Status.State = ptr.To[string]("RestoreSuccessful")
+				run.Status.State = ptr.To("RestoreSuccessful")
 			default:
 				reason = "Unknown"
 				message = string(ct)
-				run.Status.State = ptr.To[string]("Unknown")
+				run.Status.State = ptr.To("Unknown")
 			}
 		default:
 			err = fmt.Errorf("no case to change phase to %s", string(ct))
 			return
 		}
 		run.Status.Conditions = *utils.AddOrUpdateConditions(run.Status.Conditions,
+			metav1.Condition{
+				Type:               string(backupoperatoriov1.BackupRunConditionTypeNeverRun),
+				Status:             metav1.ConditionFalse,
+				Reason:             reason,
+				Message:            message,
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: run.Generation,
+			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeInProgress),
 				Status:             inProgress,
@@ -131,6 +139,8 @@ func ChangeRunState(ctx context.Context, c client.Client,
 				ObservedGeneration: run.Generation,
 			},
 		)
+		// Update metrics
+		UpdateMetricsStatus(run)
 		return c.Status().Update(ctx, run)
 	})
 }

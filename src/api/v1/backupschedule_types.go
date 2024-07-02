@@ -98,7 +98,7 @@ type BackupScheduleSpec struct {
 type backupRunTemplate struct {
 	/* Backup Run custom metadata. */
 	//+kubebuilder:validation:Optional
-	Metadata *LabelsAndAnnotationsMetadata `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Metadata *TemplateMetadata `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	/* Backup Run custom specification. */
 	Spec BackupRunSpec `json:"spec" protobuf:"bytes,2,req,name=spec"`

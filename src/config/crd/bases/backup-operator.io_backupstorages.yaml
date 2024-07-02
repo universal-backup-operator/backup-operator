@@ -19,10 +19,19 @@ spec:
       jsonPath: .spec.type
       name: Type
       type: string
-    - description: Count of schedules
+    - description: Count of child schedules
       jsonPath: .status.schedules
       name: Schedules
       type: integer
+    - description: Count of child runs
+      jsonPath: .status.runs
+      name: Runs
+      type: integer
+    - description: Total occupied storage size
+      jsonPath: .status.size
+      name: Size
+      priority: 1
+      type: string
     name: v1
     schema:
       openAPIV3Schema:
@@ -153,9 +162,22 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              runs:
+                default: 0
+                description: Total count of runs.
+                minimum: 0
+                type: integer
               schedules:
                 default: 0
                 description: Total count of schedules.
+                minimum: 0
+                type: integer
+              size:
+                description: Total occupied size by child BackupRuns.
+                type: string
+              sizeInBytes:
+                default: 0
+                description: Same as size, but in bytes.
                 minimum: 0
                 type: integer
             type: object

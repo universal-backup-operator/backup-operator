@@ -1,0 +1,22 @@
+apiVersion: backup-operator.io/v1
+kind: BackupSchedule
+metadata:
+  name: _
+spec:
+  # Retain controls whether backup will be deleted from storage on BackupRun removal
+  retainPolicy: Delete
+  template:          
+    # Standard Pod spec
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: mysql
+        image: docker.io/bitnami/mysql:8.0.34-debian-11-r75
+        command: ["sleep", "1d"]
+        env:
+        # If you need any secrets - mount them yourself
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql
+              key: mysql-password

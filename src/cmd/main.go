@@ -36,6 +36,7 @@ import (
 
 	backupoperatoriov1 "backup-operator.io/api/v1"
 	"backup-operator.io/internal/controller"
+	monitoring "backup-operator.io/internal/monitoring"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -48,6 +49,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(backupoperatoriov1.AddToScheme(scheme))
+
+	monitoring.RegisterMetrics()
 	//+kubebuilder:scaffold:scheme
 }
 
