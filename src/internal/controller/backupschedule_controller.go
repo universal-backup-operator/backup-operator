@@ -116,6 +116,13 @@ func (b *backupScheduleLifecycle) Constructor(ctx context.Context, r *utils.Mana
 // ┘─┘┴─┘──┘ ┘ ┘└┘┘─┘└─┘ ┘ ┘─┘┘└┘
 
 func (b *backupScheduleLifecycle) Destructor(ctx context.Context, r *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
+	schedule := r.Object.(*backupoperatoriov1.BackupSchedule)
+	log := log.FromContext(ctx)
+	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(schedule), schedule); err != nil {
+		log.V(1).Info("could not fetch an object")
+		return
+	}
+	backupschedule.DeleteMetric(schedule)
 	return
 }
 
@@ -240,6 +247,8 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 	if err = backupschedule.UpdateScheduleStatus(ctx, r.Client, schedule); err != nil {
 		return
 	}
+	// Update metrics
+	backupschedule.UpdateMetric(schedule)
 	// Logging information about runs
 	log.V(1).Info("runs count",
 		"total", schedule.Status.Total,

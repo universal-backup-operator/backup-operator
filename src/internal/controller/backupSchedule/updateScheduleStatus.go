@@ -90,10 +90,10 @@ func UpdateScheduleStatus(ctx context.Context, c client.Client, schedule *backup
 			})
 		}
 		// ...and count runs after deletion cleaning
-		schedule.Status.InProgress = ptr.To[uint16](uint16(len(inProgressRuns)))
-		schedule.Status.Failed = ptr.To[uint16](uint16(len(failedRuns)))
-		schedule.Status.Successful = ptr.To[uint16](uint16(len(successfulRuns)))
-		schedule.Status.Total = ptr.To[uint16](*schedule.Status.InProgress + *schedule.Status.Failed + *schedule.Status.Successful)
+		schedule.Status.InProgress = ptr.To(uint16(len(inProgressRuns)))
+		schedule.Status.Failed = ptr.To(uint16(len(failedRuns)))
+		schedule.Status.Successful = ptr.To(uint16(len(successfulRuns)))
+		schedule.Status.Total = ptr.To(*schedule.Status.InProgress + *schedule.Status.Failed + *schedule.Status.Successful)
 		if old.Status.String() != schedule.Status.String() {
 			// Make apply only in case of changes to the status
 			return c.Status().Update(ctx, schedule)

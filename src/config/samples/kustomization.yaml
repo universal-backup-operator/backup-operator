@@ -4,16 +4,9 @@ namespace: default
 namePrefix: sample-
 resources:
 - storage.yaml
-- 00_broken_no_job
-- 01_broken_wrong_path
-- 02_encryption_lost_restore_key
-- 100_encryption_compression
-- 101_only_compression
-- 102_only_encryption
-- 103_encryption_wtih_restore
-- 104_plain_backup_restore
-- 105_only_backup
-- 106_only_restore
+- working
+# Uncomment to try to deploy tests that definitely fail
+- broken
 labels:
   - pairs:
       app.kubernetes.io/name: backup-operator-sample

@@ -98,17 +98,24 @@ func (b *backupStorageLifecycle) Constructor(ctx context.Context, r *utils.Manag
 // ┘─┘┴─┘──┘ ┘ ┘└┘┘─┘└─┘ ┘ ┘─┘┘└┘
 
 func (b *backupStorageLifecycle) Destructor(ctx context.Context, r *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
-	log := log.FromContext(ctx, "storage", r.Object.GetName())
+	storage := r.Object.(*backupoperatoriov1.BackupStorage)
+	log := log.FromContext(ctx)
+	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+		log.V(1).Info("could not fetch an object")
+		return
+	}
 	// Annotation backupoperatoriov1.AnnotationDeletionProtection is honored in validation deletion webhook
 	// Destruct provider
-	if provider, ok := backupstorage.GetBackupStorageProvider(r.Object.GetName()); ok {
+	if provider, ok := backupstorage.GetBackupStorageProvider(storage.Name); ok {
 		if err = provider.Destructor(); err != nil {
 			log.Error(err, "failed to destruct storage provider")
 		}
-		backupstorage.RemoveBackupStorageProvider(r.Object.GetName())
+		backupstorage.RemoveBackupStorageProvider(storage.Name)
 	}
 	// Forget its configuration hash
-	storageProvidersConfigurationHashes.Delete(r.Object.GetUID())
+	storageProvidersConfigurationHashes.Delete(storage.GetUID())
+	// Delete metric
+	backupstorage.DeleteMetric(storage)
 	return
 }
 
@@ -206,6 +213,8 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 	}); err != nil {
 		return
 	}
+	// Update metrics
+	backupstorage.UpdateMetric(storage)
 	return
 }
 

@@ -140,7 +140,7 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			},
 		)
 		// Update metrics
-		UpdateMetricsStatus(run)
+		UpdateMetric(run)
 		return c.Status().Update(ctx, run)
 	})
 }

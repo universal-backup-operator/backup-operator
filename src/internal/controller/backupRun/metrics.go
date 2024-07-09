@@ -19,15 +19,29 @@ package backuprun
 import (
 	backupoperatoriov1 "backup-operator.io/api/v1"
 	"backup-operator.io/internal/monitoring"
+	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func UpdateMetricsStatus(run *backupoperatoriov1.BackupRun) {
+func UpdateMetric(run *backupoperatoriov1.BackupRun) {
 	ownerName := ""
 	if owner := metav1.GetControllerOf(run); owner != nil {
 		ownerName = owner.Name
 	}
+	DeleteMetric(run)
 	monitoring.BackupOperatorRunStatus.WithLabelValues(
 		run.Namespace, run.Name, *run.Status.State, ownerName, run.Spec.Storage.Name, run.Spec.Storage.Path,
 	).SetToCurrentTime()
+	if run.Status.SizeInBytes != nil {
+		monitoring.BackupOperatorRunBackupSizeBytes.WithLabelValues(
+			run.Namespace, run.Name,
+		).Add(float64(*run.Status.SizeInBytes))
+	}
+}
+
+func DeleteMetric(run *backupoperatoriov1.BackupRun) {
+	monitoring.BackupOperatorRunStatus.DeletePartialMatch(prometheus.Labels{
+		"namespace": run.Namespace,
+		"name":      run.Name,
+	})
 }

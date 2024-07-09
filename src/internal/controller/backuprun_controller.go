@@ -181,8 +181,6 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 	}
 	// Finish initialization
 	r.Recorder.Eventf(run, corev1.EventTypeNormal, "Reconciled", "Successfully reconciled")
-	// Update metrics
-	backuprun.UpdateMetricsStatus(run)
 	return
 }
 
@@ -199,9 +197,8 @@ func (b *backupRunLifecycle) Destructor(ctx context.Context, r *utils.ManagedLif
 		return
 	}
 	log.V(1).Info("starting run deletion")
-	// Update metrics
-	run.Status.State = ptr.To("Deleted")
-	backuprun.UpdateMetricsStatus(run)
+	// Deleting metric
+	backuprun.DeleteMetric(run)
 	// Delete backup from storage...
 	if *run.Spec.RetainPolicy == backupoperatoriov1.BackupRetainDelete {
 		// ...if retain is set to Delete

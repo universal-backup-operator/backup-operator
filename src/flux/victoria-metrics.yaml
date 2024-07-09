@@ -41,6 +41,8 @@ spec:
       enabled: false
     kubeScheduler:
       enabled: false
+    prometheus-node-exporter:
+      enabled: false
     victoria-metrics-operator:
       admissionWebhooks:
         certManager:

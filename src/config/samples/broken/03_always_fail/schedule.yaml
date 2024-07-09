@@ -1,0 +1,18 @@
+apiVersion: backup-operator.io/v1
+kind: BackupSchedule
+metadata:
+  name: always-fail
+spec:
+  template:
+    spec:
+      storage:
+        # Sprig templated string that must produce a valid path to result backup file in storage
+        # See http://masterminds.github.io/sprig/.
+        path: /mysql/03-{{ now | date "2006.01.02-15:04:05" }}.sql.age
+      # Command for pod exec for making a backup
+      backup:
+        # Name of pod container that we use as a target for pod exec
+        container: mysql
+        command: ["/bin/sh", "-c"]
+        args:
+        - echo Always failing the backup && fail

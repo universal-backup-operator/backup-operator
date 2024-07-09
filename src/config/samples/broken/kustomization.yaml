@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namePrefix: broken-
+resources:
+- 00_no_job
+- 01_wrong_path
+- 02_encryption_lost_restore_key
+- 03_always_fail

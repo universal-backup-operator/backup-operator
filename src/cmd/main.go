@@ -51,6 +51,8 @@ func init() {
 	utilruntime.Must(backupoperatoriov1.AddToScheme(scheme))
 
 	monitoring.RegisterMetrics()
+
+	monitoring.RegisterAlerts()
 	//+kubebuilder:scaffold:scheme
 }
 

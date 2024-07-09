@@ -16,40 +16,99 @@ limitations under the License.
 
 package monitoring
 
+import (
+	"os"
+	"strings"
+
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"golang.org/x/net/context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
 const (
 	ruleName           = "backup-operator-rules"
 	alertRuleGroup     = "backup-operator.rules"
 	runbookURLBasePath = "https://backup-operator.io/metrics"
 )
 
-// TODO Add recording rule counters
+var (
+	alertsEnabled   = !strings.Contains("false,no", strings.ToLower(os.Getenv("CREATE_ALERTS")))
+	alertsNamespace = os.Getenv("ALERTS_NAMESPACE")
+)
 
-// // NewPrometheusRule creates new PrometheusRule(CR) for the operator to have alerts and recording rules
-// func NewPrometheusRule(namespace string) *monitoringv1.PrometheusRule {
-// 	return &monitoringv1.PrometheusRule{
-// 		TypeMeta: metav1.TypeMeta{
-// 			APIVersion: monitoringv1.SchemeGroupVersion.String(),
-// 			Kind:       "PrometheusRule",
-// 		},
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      ruleName,
-// 			Namespace: namespace,
-// 		},
-// 		Spec: *NewPrometheusRuleSpec(),
-// 	}
-// }
+func RegisterAlerts() {
+	ctx := context.Background()
+	log := ctrl.Log.WithName("register-alerts")
 
-// // NewPrometheusRuleSpec creates PrometheusRuleSpec for alerts and recording rules
-// func NewPrometheusRuleSpec() *monitoringv1.PrometheusRuleSpec {
-// 	return &monitoringv1.PrometheusRuleSpec{
-// 		Groups: []monitoringv1.RuleGroup{{
-// 			Name: alertRuleGroup,
-// 			Rules: []monitoringv1.Rule{
-// 				createDeploymentSizeUndesiredAlertRule(),
-// 				createOperatorDownAlertRule(),
-// 				createOperatorUpTotalRecordingRule(),
-// 			},
-// 		}},
+	if !alertsEnabled {
+		log.Info("alert rules creation is disabled")
+		return
+	}
+	if alertsNamespace == "" {
+		namespaceFile := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+		if namespace, err := os.ReadFile(namespaceFile); err != nil {
+			alertsNamespace = string(namespace)
+		} else {
+			log.Error(err, "alert rules namespace is not defined and could not be obtained from serviceAccount file")
+			os.Exit(1)
+		}
+	}
+
+	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{})
+	if err != nil {
+		log.Error(err, "failed to create kubernetes client")
+		os.Exit(1)
+	}
+
+	rule := NewPrometheusRule(alertsNamespace)
+	existingRule := &monitoringv1.PrometheusRule{}
+	if err = c.Get(ctx, types.NamespacedName{Name: ruleName, Namespace: metricsNamespace}, existingRule); err == nil {
+		rule.SetResourceVersion(existingRule.GetResourceVersion())
+		if err = c.Update(ctx, rule); err != nil {
+			log.Error(err, "failed to update prometheus rule")
+			os.Exit(1)
+		}
+	} else {
+		if err = c.Create(ctx, rule); err != nil {
+			log.Error(err, "failed to create prometheus rule")
+			os.Exit(1)
+		}
+	}
+}
+
+// NewPrometheusRule creates new PrometheusRule(CR) for the operator to have alerts and recording rules
+func NewPrometheusRule(namespace string) *monitoringv1.PrometheusRule {
+	return &monitoringv1.PrometheusRule{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: monitoringv1.SchemeGroupVersion.String(),
+			Kind:       "PrometheusRule",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ruleName,
+			Namespace: namespace,
+		},
+		Spec: *NewPrometheusRuleSpec(),
+	}
+}
+
+// NewPrometheusRuleSpec creates PrometheusRuleSpec for alerts and recording rules
+func NewPrometheusRuleSpec() *monitoringv1.PrometheusRuleSpec {
+	return &monitoringv1.PrometheusRuleSpec{
+		Groups: []monitoringv1.RuleGroup{{
+			Name:  alertRuleGroup,
+			Rules: []monitoringv1.Rule{},
+		}},
+	}
+}
+
+// // createOperatorUpTotalRecordingRule creates memcached_operator_up_total recording rule
+// func createOperatorUpTotalRecordingRule() monitoringv1.Rule {
+// 	return monitoringv1.Rule{
+// 		Record: operatorUpTotalRecordingRule,
+// 		Expr:   intstr.FromString("sum(up{pod=~'memcached-operator-controller-manager-.*'} or vector(0))"),
 // 	}
 // }
 
@@ -81,13 +140,5 @@ const (
 // 			"severity":    "critical",
 // 			"runbook_url": runbookURLBasePath + "/MemcachedOperatorDown.md",
 // 		},
-// 	}
-// }
-
-// // createOperatorUpTotalRecordingRule creates memcached_operator_up_total recording rule
-// func createOperatorUpTotalRecordingRule() monitoringv1.Rule {
-// 	return monitoringv1.Rule{
-// 		Record: operatorUpTotalRecordingRule,
-// 		Expr:   intstr.FromString("sum(up{pod=~'memcached-operator-controller-manager-.*'} or vector(0))"),
 // 	}
 // }

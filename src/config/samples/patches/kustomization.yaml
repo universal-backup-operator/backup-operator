@@ -13,4 +13,4 @@ patches:
       value: Retain
   target:
     kind: BackupRun
-    name: 106.+
+    name: '.+106.+'

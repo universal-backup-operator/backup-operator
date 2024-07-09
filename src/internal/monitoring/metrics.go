@@ -28,12 +28,12 @@ var startTime = time.Now()
 
 // Metrics is a map to store created metrics.
 var (
-	namespace = "backup_operator"
+	metricsNamespace = "backup_operator"
 	//  ┐─┐┌┐┐┌─┐┬─┐┬─┐┌─┐┬─┐
 	//  └─┐ │ │ ││┬┘│─┤│ ┬├─
 	//  ──┘ ┘ ┘─┘┘└┘┘ ┘┘─┘┴─┘
 	BackupOperatorStorageStatus = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: namespace,
+		Namespace: metricsNamespace,
 		Subsystem: "storage",
 		Name:      "status",
 		Help:      "BackupStorage execution status.",
@@ -42,7 +42,7 @@ var (
 	// └─┐│  │─┤├─ │ ││ ││  ├─
 	// ──┘└─┘┘ ┴┴─┘┘─┘┘─┘┘─┘┴─┘
 	BackupOperatorScheduleStatus = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: namespace,
+		Namespace: metricsNamespace,
 		Subsystem: "schedule",
 		Name:      "status",
 		Help:      "BackupSchedule execution status.",
@@ -51,13 +51,13 @@ var (
 	// │┬┘│ ││││
 	// ┘└┘┘─┘┘└┘
 	BackupOperatorRunStatus = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: namespace,
+		Namespace: metricsNamespace,
 		Subsystem: "run",
 		Name:      "status",
 		Help:      "BackupRun execution status, hold time of last status change.",
 	}, []string{"namespace", "name", "state", "schedule", "storage", "path"})
 	BackupOperatorRunBackupSizeBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: namespace,
+		Namespace: metricsNamespace,
 		Subsystem: "run",
 		Name:      "backup_size_bytes",
 		Help:      "Size of data stored in the backup storage.",
@@ -66,7 +66,7 @@ var (
 	//  │ ││─┘├─ │┬┘│─┤ │ │ ││┬┘
 	//  ┘─┘┘  ┴─┘┘└┘┘ ┘ ┘ ┘─┘┘└┘
 	BackupOperatorUptimeSeconds = prometheus.NewCounterFunc(prometheus.CounterOpts{
-		Namespace: namespace,
+		Namespace: metricsNamespace,
 		Subsystem: "operator",
 		Name:      "uptime_seconds",
 		Help:      "Operator uptime in seconds",
