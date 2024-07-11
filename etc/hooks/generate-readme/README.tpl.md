@@ -21,6 +21,10 @@ helm install backup-operator backup-operator/backup-operator
 
 {{ .Annotations }}
 
+## Monitoring
+
+Grafana dashboard is located at [here](etc/grafana-dashboard.json).
+
 ## Contributing
 
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
