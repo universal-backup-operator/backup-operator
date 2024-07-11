@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   backup-operator:
   - apiVersion: v2
+    appVersion: 1.1.2
+    created: "2024-07-11T13:15:05.933969244Z"
+    description: Universal Backup Operator
+    digest: bf46051197f3064ad2116c98548e671a305c39644aa0a842272f79ff1ab6dbb4
+    name: backup-operator
+    type: application
+    urls:
+    - https://github.com/universal-backup-operator/backup-operator/releases/download/backup-operator-1.1.2/backup-operator-1.1.2.tgz
+    version: 1.1.2
+  - apiVersion: v2
     appVersion: 1.0.0
     created: "2024-03-17T16:38:22.660581481Z"
     description: Universal Backup Operator
@@ -11,4 +21,4 @@ entries:
     urls:
     - https://github.com/universal-backup-operator/backup-operator/releases/download/backup-operator-1.0.0/backup-operator-1.0.0.tgz
     version: 1.0.0
-generated: "2024-03-17T16:38:22.660591359Z"
+generated: "2024-07-11T13:15:05.933980355Z"
