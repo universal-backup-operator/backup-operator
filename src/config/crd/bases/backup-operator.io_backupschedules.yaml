@@ -12,9 +12,7 @@ spec:
     listKind: BackupScheduleList
     plural: backupschedules
     shortNames:
-    - bacsc
-    - backsc
-    - backupsc
+    - bs
     singular: backupschedule
   scope: Namespaced
   versions:

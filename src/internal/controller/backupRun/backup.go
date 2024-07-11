@@ -58,7 +58,7 @@ func Backup(ctx context.Context, c client.Client, s *runtime.Scheme,
 		Command: append(action.Command, action.Args...),
 	}
 	if action.DeadlineSeconds != nil {
-		exec.Timeout = ptr.To[time.Duration](time.Second * time.Duration(*action.DeadlineSeconds))
+		exec.Timeout = ptr.To(time.Second * time.Duration(*action.DeadlineSeconds))
 	}
 	// Create compressor and encryptor
 	var compressor compression.Compression

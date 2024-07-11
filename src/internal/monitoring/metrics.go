@@ -17,6 +17,7 @@ limitations under the License.
 package monitoring
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,7 +33,8 @@ var (
 	//  ┐─┐┌┐┐┌─┐┬─┐┬─┐┌─┐┬─┐
 	//  └─┐ │ │ ││┬┘│─┤│ ┬├─
 	//  ──┘ ┘ ┘─┘┘└┘┘ ┘┘─┘┴─┘
-	BackupOperatorStorageStatus = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	BackupOperatorStorageStatusFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "storage", "status")
+	BackupOperatorStorageStatus         = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: metricsNamespace,
 		Subsystem: "storage",
 		Name:      "status",
@@ -41,7 +43,8 @@ var (
 	// ┐─┐┌─┐┬ ┬┬─┐┬─┐┬ ┐┬  ┬─┐
 	// └─┐│  │─┤├─ │ ││ ││  ├─
 	// ──┘└─┘┘ ┴┴─┘┘─┘┘─┘┘─┘┴─┘
-	BackupOperatorScheduleStatus = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	BackupOperatorScheduleStatusFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "schedule", "status")
+	BackupOperatorScheduleStatus         = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: metricsNamespace,
 		Subsystem: "schedule",
 		Name:      "status",
@@ -50,13 +53,15 @@ var (
 	// ┬─┐┬ ┐┌┐┐
 	// │┬┘│ ││││
 	// ┘└┘┘─┘┘└┘
-	BackupOperatorRunStatus = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	BackupOperatorRunStatusFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "run", "status")
+	BackupOperatorRunStatus         = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: metricsNamespace,
 		Subsystem: "run",
 		Name:      "status",
 		Help:      "BackupRun execution status, hold time of last status change.",
 	}, []string{"namespace", "name", "state", "schedule", "storage", "path"})
-	BackupOperatorRunBackupSizeBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
+	BackupOperatorRunBackupSizeBytesFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "run", "backup_size_bytes")
+	BackupOperatorRunBackupSizeBytes         = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: metricsNamespace,
 		Subsystem: "run",
 		Name:      "backup_size_bytes",
@@ -65,7 +70,8 @@ var (
 	//  ┌─┐┬─┐┬─┐┬─┐┬─┐┌┐┐┌─┐┬─┐
 	//  │ ││─┘├─ │┬┘│─┤ │ │ ││┬┘
 	//  ┘─┘┘  ┴─┘┘└┘┘ ┘ ┘ ┘─┘┘└┘
-	BackupOperatorUptimeSeconds = prometheus.NewCounterFunc(prometheus.CounterOpts{
+	BackupOperatorUptimeSecondsFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "operator", "uptime_seconds")
+	BackupOperatorUptimeSeconds         = prometheus.NewCounterFunc(prometheus.CounterOpts{
 		Namespace: metricsNamespace,
 		Subsystem: "operator",
 		Name:      "uptime_seconds",

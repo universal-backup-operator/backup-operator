@@ -95,8 +95,7 @@ and upload backups to the place defined in these BackupStorages for long time st
 */
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=bacst;backst;backupst
-//+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:scope=Cluster,shortName=bt
 //+kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`,description="Storage type"
 //+kubebuilder:printcolumn:name="Schedules",type=integer,JSONPath=`.status.schedules`,description="Count of child schedules"
 //+kubebuilder:printcolumn:name="Runs",type=integer,JSONPath=`.status.runs`,description="Count of child runs"

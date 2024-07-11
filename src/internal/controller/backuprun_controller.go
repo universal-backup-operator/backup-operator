@@ -206,15 +206,17 @@ func (b *backupRunLifecycle) Destructor(ctx context.Context, r *utils.ManagedLif
 		var storage backupstorage.BackupStorageProvider
 		if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
 			log.V(1).Info("failed to get backupStorageProvider", "storageName", run.Spec.Storage.Name)
-			// Deletion is best effort, if it fails - no need to reschedule
-			return result, nil
+			r.Recorder.Eventf(run, corev1.EventTypeWarning, "Deletion", "Failed to find the storage, ignore if operator has restarted recently")
+			result.RequeueAfter = time.Second * 5
+			return
 		}
 		log = log.WithValues("storageName", run.Spec.Storage.Name, "backupPath", run.Spec.Storage.Path)
-		log.V(1).Info("storage provider has been found, making deletion at path")
-		if err := storage.Delete(ctx, run.Spec.Storage.Path); err != nil {
+		log.V(1).Info("deleting backup")
+		if err = storage.Delete(ctx, run.Spec.Storage.Path); err != nil {
 			log.V(1).Error(err, "failed to delete the backup")
-			// Deletion is best effort, if it fails - no need to reschedule
-			return result, nil
+			r.Recorder.Eventf(run, corev1.EventTypeWarning, "Deletion", "Failed to delete the backup", "error", err.Error())
+			result.RequeueAfter = time.Minute
+			return
 		}
 	}
 	return
@@ -237,6 +239,7 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	var storage backupstorage.BackupStorageProvider
 	if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
 		// ...if fail - reschedule
+		r.Recorder.Eventf(run, corev1.EventTypeWarning, "NoStorage", "Storage is not ready: %s", run.Spec.Storage.Name)
 		result.RequeueAfter = time.Second * 20
 		return
 	}
@@ -331,8 +334,28 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	return
 }
 
+var backupRunIndexers = map[string]client.IndexerFunc{
+	".metadata.controller": func(o client.Object) []string {
+		owner := metav1.GetControllerOf(o)
+		if owner == nil {
+			return nil
+		}
+		return []string{string(owner.UID)}
+	},
+	".spec.storage.name": func(o client.Object) []string {
+		run := o.(*backupoperatoriov1.BackupRun)
+		return []string{string(run.Spec.Storage.Name)}
+	},
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *BackupRunReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	for path, function := range backupRunIndexers {
+		if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+			&backupoperatoriov1.BackupRun{}, path, function); err != nil {
+			return err
+		}
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupoperatoriov1.BackupRun{}).
 		Owns(&corev1.Pod{}).

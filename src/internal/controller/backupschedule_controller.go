@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -81,33 +80,6 @@ type backupScheduleLifecycle struct{}
 // └─┘┘─┘┘└┘──┘ ┘ ┘└┘┘─┘ ┘ ┘─┘┘└┘
 
 func (b *backupScheduleLifecycle) Constructor(ctx context.Context, r *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
-	schedule := r.Object.(*backupoperatoriov1.BackupSchedule)
-	log := log.FromContext(ctx)
-	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(schedule), schedule); err != nil {
-		log.V(1).Info("could not fetch an object")
-		return
-	}
-	// Add BackupStorage owner reference
-	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		storage := &backupoperatoriov1.BackupStorage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: schedule.Spec.Template.Spec.Storage.Name,
-			},
-		}
-		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-			return err
-		}
-		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(schedule), schedule); err != nil {
-			return err
-		}
-		if err = ctrl.SetControllerReference(storage, schedule, r.Scheme); err != nil {
-			return err
-		}
-		return r.Client.Update(ctx, schedule)
-	}); err != nil {
-		err = fmt.Errorf("error referencing BackupStorage as an owner: %s", err.Error())
-		return
-	}
 	return
 }
 
@@ -259,26 +231,28 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 	return
 }
 
+var backupScheduleIndexers = map[string]client.IndexerFunc{
+	".metadata.controller": func(o client.Object) []string {
+		owner := metav1.GetControllerOf(o)
+		if owner == nil {
+			return nil
+		}
+		return []string{string(owner.UID)}
+	},
+	".spec.template.spec.storage.name": func(o client.Object) []string {
+		schedule := o.(*backupoperatoriov1.BackupSchedule)
+		return []string{string(schedule.Spec.Template.Spec.Storage.Name)}
+	},
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *BackupScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
-		&backupoperatoriov1.BackupRun{}, ".metadata.controller", func(o client.Object) []string {
-			// Grab the run object, extract the owner
-			run := o.(*backupoperatoriov1.BackupRun)
-			owner := metav1.GetControllerOf(run)
-			if owner == nil {
-				return nil
-			}
-			// Make sure it's a BackupSchedule
-			if owner.APIVersion != backupoperatoriov1.GroupVersion.String() ||
-				owner.Kind != "BackupSchedule" {
-				return nil
-			}
-			return []string{string(owner.UID)}
-		}); err != nil {
-		return err
+	for path, function := range backupScheduleIndexers {
+		if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+			&backupoperatoriov1.BackupSchedule{}, path, function); err != nil {
+			return err
+		}
 	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupoperatoriov1.BackupSchedule{}).
 		Owns(&backupoperatoriov1.BackupRun{}).

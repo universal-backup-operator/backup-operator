@@ -118,6 +118,10 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
 			return
 		}
+		// The object is to be rescheduled, but no error
+		if result.RequeueAfter != 0 {
+			return
+		}
 		// Removing finalizer
 		if controllerutil.ContainsFinalizer(r.Object, finalizer) {
 			// Remove our finalizer

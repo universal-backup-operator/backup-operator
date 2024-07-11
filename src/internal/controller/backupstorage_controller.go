@@ -22,7 +22,9 @@ import (
 	"sync"
 
 	"github.com/creasty/defaults"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -31,15 +33,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	backupoperatoriov1 "backup-operator.io/api/v1"
 	backupstorage "backup-operator.io/internal/controller/backupStorage"
 	backupstorageproviders "backup-operator.io/internal/controller/backupStorage/providers"
 	utils "backup-operator.io/internal/controller/utils"
+	"backup-operator.io/internal/monitoring"
 )
 
 // BackupStorageReconciler reconciles a BackupStorage object
@@ -68,6 +71,7 @@ type BackupStorageReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *BackupStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	monitoring.RegisterAlerts(ctx, r.Client)
 	return utils.ManageLifecycle(ctx, &utils.ManagedLifecycleReconcile{
 		Client:   r.Client,
 		Config:   r.Config,
@@ -186,27 +190,24 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 		}
 		// List child schedules
 		childSchedules := &backupoperatoriov1.BackupScheduleList{}
-		if err = r.List(ctx, childSchedules, client.MatchingFields{".metadata.controller": string(storage.UID)}); err != nil {
+		if err = r.List(ctx, childSchedules, client.MatchingFields{".spec.template.spec.storage.name": storage.Name}); err != nil {
 			log.V(0).Error(err, "unable to list child schedules")
 			return err
 		}
 		// List child runs
 		childRuns := &backupoperatoriov1.BackupRunList{}
-		if err = r.List(ctx, childRuns); err != nil {
-			log.V(0).Error(err, "unable to list child schedules")
+		if err = r.List(ctx, childRuns, client.MatchingFields{".spec.storage.name": storage.Name}); err != nil {
+			log.V(0).Error(err, "unable to list child runs")
 			return err
 		}
-		var childRunsCount, childRunsSizeInBytes uint = 0, 0
+		var childRunsSizeInBytes uint = 0
 		for _, run := range childRuns.Items {
-			if run.Spec.Storage.Name == storage.Name {
-				childRunsCount++
-				if run.Status.SizeInBytes != nil {
-					childRunsSizeInBytes += *run.Status.SizeInBytes
-				}
+			if run.Status.SizeInBytes != nil {
+				childRunsSizeInBytes += *run.Status.SizeInBytes
 			}
 		}
 		storage.Status.Schedules = ptr.To(uint16(len(childSchedules.Items)))
-		storage.Status.Runs = ptr.To(uint16(childRunsCount))
+		storage.Status.Runs = ptr.To(uint16(len(childRuns.Items)))
 		storage.Status.SizeInBytes = ptr.To(childRunsSizeInBytes)
 		storage.Status.Size = ptr.To(utils.ConvertBytesToHumanReadable(childRunsSizeInBytes))
 		return r.Client.Status().Update(ctx, storage)
@@ -218,30 +219,50 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 	return
 }
 
+var backupStorageIndexers = map[string]client.IndexerFunc{
+	".metadata.controller": func(o client.Object) []string {
+		owner := metav1.GetControllerOf(o)
+		if owner == nil {
+			return nil
+		}
+		return []string{string(owner.UID)}
+	},
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *BackupStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
-		&backupoperatoriov1.BackupSchedule{}, ".metadata.controller", func(o client.Object) []string {
-			// Grab the schedule object, extract the owner
-			schedule := o.(*backupoperatoriov1.BackupSchedule)
-			owner := metav1.GetControllerOf(schedule)
-			if owner == nil {
-				return nil
-			}
-			// Make sure it's a BackupStorage
-			if owner.APIVersion != backupoperatoriov1.GroupVersion.String() ||
-				owner.Kind != "BackupStorage" {
-				return nil
-			}
-			return []string{string(owner.UID)}
-		}); err != nil {
-		return err
+	for path, function := range backupStorageIndexers {
+		if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+			&backupoperatoriov1.BackupStorage{}, path, function); err != nil {
+			return err
+		}
 	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupoperatoriov1.BackupStorage{}).
-		Owns(&backupoperatoriov1.BackupSchedule{}).
-		Watches(&backupoperatoriov1.BackupRun{}, &handler.EnqueueRequestForObject{}).
+		Watches(&backupoperatoriov1.BackupSchedule{}, handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, o client.Object) []reconcile.Request {
+				schedule := o.(*backupoperatoriov1.BackupSchedule)
+				return []reconcile.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name: schedule.Spec.Template.Spec.Storage.Name,
+						},
+					},
+				}
+			}),
+		).
+		Watches(&backupoperatoriov1.BackupRun{}, handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, o client.Object) []reconcile.Request {
+				run := o.(*backupoperatoriov1.BackupRun)
+				return []reconcile.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name: run.Spec.Storage.Name,
+						},
+					},
+				}
+			}),
+		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
 		WithEventFilter(utils.IgnoreOutOfOrder()).
 		Complete(r)

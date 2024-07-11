@@ -173,7 +173,7 @@ It creates BackupRun objects on schedule.
 */
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=bacsc;backsc;backupsc
+//+kubebuilder:resource:shortName=bs
 //+kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule`,description="CRON schedule"
 //+kubebuilder:printcolumn:name="Storage",type=string,JSONPath=`.spec.template.spec.storage.name`,description="Backup storage"
 //+kubebuilder:printcolumn:name="Total",type=integer,JSONPath=`.status.total`,description="Total backups count"

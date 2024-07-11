@@ -17,73 +17,76 @@ limitations under the License.
 package monitoring
 
 import (
+	"fmt"
 	"os"
-	"strings"
 
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	prometheus "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	ruleName           = "backup-operator-rules"
-	alertRuleGroup     = "backup-operator.rules"
-	runbookURLBasePath = "https://backup-operator.io/metrics"
+	ruleName           = "backup-operator-rules"              // Name of the Prometheus rule
+	alertRuleGroup     = "backup-operator.rules"              // Name of the alert rule group
+	runbookURLBasePath = "https://backup-operator.io/metrics" // Base URL for runbooks
 )
 
 var (
-	alertsEnabled   = !strings.Contains("false,no", strings.ToLower(os.Getenv("CREATE_ALERTS")))
-	alertsNamespace = os.Getenv("ALERTS_NAMESPACE")
+	alertsInitialized = false                                 // Flag indicating if alerts are initialized
+	alertsEnabled     = os.Getenv("ENABLE_ALERTS") != "false" // Flag indicating if alerts are enabled based on environment variable
+	alertsNamespace   = os.Getenv("ALERTS_NAMESPACE")         // Namespace for alerts based on environment variable
 )
 
-func RegisterAlerts() {
-	ctx := context.Background()
-	log := ctrl.Log.WithName("register-alerts")
+// RegisterAlerts registers Prometheus alert rules in the cluster
+func RegisterAlerts(ctx context.Context, c client.Client) (err error) {
+	log := ctrl.Log.WithName("register-alerts") // Logger for register-alerts
 
-	if !alertsEnabled {
+	// Check if alerts are disabled or already initialized
+	if !alertsEnabled || alertsInitialized {
 		log.Info("alert rules creation is disabled")
 		return
 	}
+
+	// Determine the namespace for alerts
 	if alertsNamespace == "" {
 		namespaceFile := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-		if namespace, err := os.ReadFile(namespaceFile); err != nil {
-			alertsNamespace = string(namespace)
+		var n []byte
+		if n, err = os.ReadFile(namespaceFile); err != nil {
+			alertsNamespace = string(n)
 		} else {
-			log.Error(err, "alert rules namespace is not defined and could not be obtained from serviceAccount file")
-			os.Exit(1)
+			err = fmt.Errorf("alert rules namespace is not defined and could not be obtained from serviceAccount file: %s", err.Error())
+			return
 		}
 	}
 
-	c, err := client.New(ctrl.GetConfigOrDie(), client.Options{})
-	if err != nil {
-		log.Error(err, "failed to create kubernetes client")
-		os.Exit(1)
-	}
-
+	// Create or update the Prometheus rule
 	rule := NewPrometheusRule(alertsNamespace)
-	existingRule := &monitoringv1.PrometheusRule{}
-	if err = c.Get(ctx, types.NamespacedName{Name: ruleName, Namespace: metricsNamespace}, existingRule); err == nil {
+	existingRule := &prometheus.PrometheusRule{}
+	if err = c.Get(ctx, types.NamespacedName{Name: ruleName, Namespace: alertsNamespace}, existingRule); err == nil {
 		rule.SetResourceVersion(existingRule.GetResourceVersion())
 		if err = c.Update(ctx, rule); err != nil {
-			log.Error(err, "failed to update prometheus rule")
-			os.Exit(1)
+			err = fmt.Errorf("failed to update prometheus rule: %s", err.Error())
 		}
 	} else {
+		log.Error(err, "failed to get old rule")
 		if err = c.Create(ctx, rule); err != nil {
-			log.Error(err, "failed to create prometheus rule")
-			os.Exit(1)
+			err = fmt.Errorf("failed to create prometheus rule: %s", err.Error())
 		}
 	}
+
+	alertsInitialized = true
+	return
 }
 
-// NewPrometheusRule creates new PrometheusRule(CR) for the operator to have alerts and recording rules
-func NewPrometheusRule(namespace string) *monitoringv1.PrometheusRule {
-	return &monitoringv1.PrometheusRule{
+// NewPrometheusRule creates a new PrometheusRule object
+func NewPrometheusRule(namespace string) *prometheus.PrometheusRule {
+	return &prometheus.PrometheusRule{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: monitoringv1.SchemeGroupVersion.String(),
+			APIVersion: prometheus.SchemeGroupVersion.String(),
 			Kind:       "PrometheusRule",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -94,51 +97,48 @@ func NewPrometheusRule(namespace string) *monitoringv1.PrometheusRule {
 	}
 }
 
-// NewPrometheusRuleSpec creates PrometheusRuleSpec for alerts and recording rules
-func NewPrometheusRuleSpec() *monitoringv1.PrometheusRuleSpec {
-	return &monitoringv1.PrometheusRuleSpec{
-		Groups: []monitoringv1.RuleGroup{{
+// NewPrometheusRuleSpec creates a new PrometheusRuleSpec object
+func NewPrometheusRuleSpec() *prometheus.PrometheusRuleSpec {
+	var rules []prometheus.Rule
+
+	// Add rules for counting backup operator runs by various dimensions
+	rules = append(rules, func() (r []prometheus.Rule) {
+		for _, by := range []string{"namespace", "storage", "schedule", "state"} {
+			r = append(r, prometheus.Rule{
+				Record: fmt.Sprintf("%s:%s_run:count", by, metricsNamespace),
+				Expr: intstr.FromString(
+					fmt.Sprintf("count by (%s) (%s)", by, BackupOperatorRunStatusFullName),
+				),
+			})
+		}
+		return
+	}()...)
+
+	// Add rules for counting backup operator schedules by namespace and storage
+	rules = append(rules, func() (r []prometheus.Rule) {
+		for _, by := range []string{"namespace", "storage"} {
+			r = append(r, prometheus.Rule{
+				Record: fmt.Sprintf("%s:%s_schedule:count", by, metricsNamespace),
+				Expr: intstr.FromString(
+					fmt.Sprintf("count by (%s) (%s)", by, BackupOperatorScheduleStatusFullName),
+				),
+			})
+		}
+		return
+	}()...)
+
+	// Add rule for counting backup operator storage
+	rules = append(rules, prometheus.Rule{
+		Record: fmt.Sprintf("%s_storage:count", metricsNamespace),
+		Expr: intstr.FromString(
+			fmt.Sprintf("count(%s)", BackupOperatorStorageStatusFullName),
+		),
+	})
+
+	return &prometheus.PrometheusRuleSpec{
+		Groups: []prometheus.RuleGroup{{
 			Name:  alertRuleGroup,
-			Rules: []monitoringv1.Rule{},
+			Rules: rules,
 		}},
 	}
 }
-
-// // createOperatorUpTotalRecordingRule creates memcached_operator_up_total recording rule
-// func createOperatorUpTotalRecordingRule() monitoringv1.Rule {
-// 	return monitoringv1.Rule{
-// 		Record: operatorUpTotalRecordingRule,
-// 		Expr:   intstr.FromString("sum(up{pod=~'memcached-operator-controller-manager-.*'} or vector(0))"),
-// 	}
-// }
-
-// // createDeploymentSizeUndesiredAlertRule creates MemcachedDeploymentSizeUndesired alert rule
-// func createDeploymentSizeUndesiredAlertRule() monitoringv1.Rule {
-// 	return monitoringv1.Rule{
-// 		Alert: deploymentSizeUndesiredAlert,
-// 		Expr:  intstr.FromString("increase(memcached_deployment_size_undesired_count_total[5m]) >= 3"),
-// 		Annotations: map[string]string{
-// 			"description": "Memcached-sample deployment size was not as desired more than 3 times in the last 5 minutes.",
-// 		},
-// 		Labels: map[string]string{
-// 			"severity":    "warning",
-// 			"runbook_url": runbookURLBasePath + "/MemcachedDeploymentSizeUndesired.md",
-// 		},
-// 	}
-// }
-
-// // createOperatorDownAlertRule creates MemcachedOperatorDown alert rule
-// func createOperatorDownAlertRule() monitoringv1.Rule {
-// 	return monitoringv1.Rule{
-// 		Alert: operatorDownAlert,
-// 		Expr:  intstr.FromString("memcached_operator_up_total == 0"),
-// 		Annotations: map[string]string{
-// 			"description": "No running memcached-operator pods were detected in the last 5 min.",
-// 		},
-// 		For: "5m",
-// 		Labels: map[string]string{
-// 			"severity":    "critical",
-// 			"runbook_url": runbookURLBasePath + "/MemcachedOperatorDown.md",
-// 		},
-// 	}
-// }

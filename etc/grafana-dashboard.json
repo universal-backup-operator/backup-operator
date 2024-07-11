@@ -463,8 +463,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "blue",
-                    "value": null
+                    "color": "blue"
                   }
                 ]
               }
@@ -529,8 +528,11 @@
                 "mode": "absolute",
                 "steps": [
                   {
+                    "color": "red"
+                  },
+                  {
                     "color": "green",
-                    "value": null
+                    "value": 1
                   }
                 ]
               }
@@ -594,8 +596,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -662,8 +663,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "purple",
-                    "value": null
+                    "color": "purple"
                   }
                 ]
               },
@@ -735,8 +735,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -879,6 +878,34 @@
     "list": [
       {
         "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "P4169E866C3094E38"
+        },
+        "definition": "label_values(kube_node_info,cluster)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Cluster",
+        "multi": true,
+        "name": "cluster",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(kube_node_info,cluster)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
           "selected": true,
           "text": [
             "All"
@@ -891,7 +918,7 @@
           "type": "prometheus",
           "uid": "P4169E866C3094E38"
         },
-        "definition": "label_values(backup_operator_storage_status,name)",
+        "definition": "label_values(backup_operator_storage_status{cluster=~\"$cluster\"},name)",
         "hide": 0,
         "includeAll": true,
         "label": "Storage",
@@ -900,7 +927,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(backup_operator_storage_status,name)",
+          "query": "label_values(backup_operator_storage_status{cluster=~\"$cluster\"},name)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -911,24 +938,28 @@
       },
       {
         "current": {
-          "selected": false,
-          "text": "default",
-          "value": "default"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "prometheus",
           "uid": "P4169E866C3094E38"
         },
-        "definition": "label_values(backup_operator_schedule_status{storage=~\"$storage\"},namespace)",
+        "definition": "label_values(backup_operator_schedule_status{cluster=~\"$cluster\", storage=~\"$storage\"},namespace)",
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": "Namespace",
-        "multi": false,
+        "multi": true,
         "name": "namespace",
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(backup_operator_schedule_status{storage=~\"$storage\"},namespace)",
+          "query": "label_values(backup_operator_schedule_status{cluster=~\"$cluster\", storage=~\"$storage\"},namespace)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -952,7 +983,7 @@
           "type": "prometheus",
           "uid": "P4169E866C3094E38"
         },
-        "definition": "label_values(backup_operator_schedule_status{namespace=~\"$namespace\", storage=~\"$storage\"},name)",
+        "definition": "label_values(backup_operator_schedule_status{namespace=~\"$namespace\", storage=~\"$storage\", cluster=~\"$cluster\"},name)",
         "hide": 0,
         "includeAll": true,
         "label": "Schedule",
@@ -961,39 +992,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(backup_operator_schedule_status{namespace=~\"$namespace\", storage=~\"$storage\"},name)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "P4169E866C3094E38"
-        },
-        "definition": "label_values(backup_operator_run_status{namespace=~\"$namespace\", schedule=~\"$schedule\"},name)",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Run",
-        "multi": true,
-        "name": "run",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(backup_operator_run_status{namespace=~\"$namespace\", schedule=~\"$schedule\"},name)",
+          "query": "label_values(backup_operator_schedule_status{namespace=~\"$namespace\", storage=~\"$storage\", cluster=~\"$cluster\"},name)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -1024,6 +1023,6 @@
   "timezone": "browser",
   "title": "Backup Operator",
   "uid": "bdr7z8itefytcd",
-  "version": 2,
+  "version": 7,
   "weekStart": ""
 }

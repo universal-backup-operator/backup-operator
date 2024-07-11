@@ -19,7 +19,6 @@ package backupstorage
 import (
 	"context"
 	"io"
-	"time"
 
 	backupoperatoriov1 "backup-operator.io/api/v1"
 )
@@ -49,14 +48,7 @@ var backupStorageProviders = map[string]BackupStorageProvider{}
 
 // Get backup storage provider by name
 func GetBackupStorageProvider(name string) (storage BackupStorageProvider, ok bool) {
-	if storage, ok = backupStorageProviders[name]; !ok {
-		// ...if it is not, try to wait a bit for BackupStorage controller to finish...
-		time.Sleep(5 * time.Second)
-		// ...and get storage once again
-		if storage, ok = backupStorageProviders[name]; !ok {
-			return
-		}
-	}
+	storage, ok = backupStorageProviders[name]
 	return
 }
 

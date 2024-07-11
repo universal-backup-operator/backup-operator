@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -36,7 +37,8 @@ import (
 
 	backupoperatoriov1 "backup-operator.io/api/v1"
 	"backup-operator.io/internal/controller"
-	monitoring "backup-operator.io/internal/monitoring"
+	"backup-operator.io/internal/monitoring"
+	prometheus "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -50,9 +52,7 @@ func init() {
 
 	utilruntime.Must(backupoperatoriov1.AddToScheme(scheme))
 
-	monitoring.RegisterMetrics()
-
-	monitoring.RegisterAlerts()
+	utilruntime.Must(prometheus.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -127,6 +127,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	monitoring.RegisterMetrics()
+	monitoring.RegisterAlerts(context.Background(), mgr.GetClient())
+
 	if err = (&controller.BackupStorageReconciler{
 		Client:   mgr.GetClient(),
 		Config:   mgr.GetConfig(),
@@ -159,14 +162,14 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "BackupRun")
 			os.Exit(1)
 		}
-	}
-	if err = (&backupoperatoriov1.BackupSchedule{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "BackupSchedule")
-		os.Exit(1)
-	}
-	if err = (&backupoperatoriov1.BackupStorage{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "BackupStorage")
-		os.Exit(1)
+		if err = (&backupoperatoriov1.BackupSchedule{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "BackupSchedule")
+			os.Exit(1)
+		}
+		if err = (&backupoperatoriov1.BackupStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "BackupStorage")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

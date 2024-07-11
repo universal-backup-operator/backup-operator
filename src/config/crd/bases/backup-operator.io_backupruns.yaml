@@ -12,9 +12,7 @@ spec:
     listKind: BackupRunList
     plural: backupruns
     shortNames:
-    - bacr
-    - backr
-    - backuprun
+    - br
     singular: backuprun
   scope: Namespaced
   versions:
