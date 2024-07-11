@@ -114,6 +114,8 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 	if err = backupschedule.UpdateScheduleStatus(ctx, r.Client, schedule); err != nil {
 		return
 	}
+	// Update metrics
+	backupschedule.UpdateMetric(schedule)
 	// Check if we suspended
 	if backupschedule.CheckScheduleSuspended(schedule) {
 		log.V(1).Info("schedule is suspended, skipping")

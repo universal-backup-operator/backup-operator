@@ -252,6 +252,8 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	}
 	// Exit if we do not have to run
 	if !state.HaveToBackup && !state.HaveToRestore {
+		// Update metrics
+		backuprun.UpdateMetric(run)
 		return
 	}
 	// Set InProgress to true
