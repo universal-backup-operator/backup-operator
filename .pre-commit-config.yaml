@@ -18,8 +18,22 @@ repos:
   hooks:
     - id: inkscape-anonimize
       name: Inkscape Anonimize
-      entry: etc/anonymize.sh
+      entry: etc/hooks/anonymize.sh
       language: script
       files: ^etc/logo.svg$
       types: [file]
       pass_filenames: true
+    - id: helm-values-json-schema
+      name: Generate Helm values JSON schemas
+      entry: etc/hooks/helm-schema.sh
+      language: script
+      files: ^charts/.*/values.yaml$
+      types: [file]
+      pass_filenames: false
+    - id: generate-readme
+      name: Generate README.md
+      entry: etc/hooks/generate-readme/hook.sh
+      language: script
+      files: .*README.*
+      types: [file]
+      pass_filenames: false

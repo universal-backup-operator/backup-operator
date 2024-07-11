@@ -1,0 +1,27 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+        "extraLabels": {
+            "properties": {},
+            "type": "object"
+        },
+        "extraSelectorLabels": {
+            "properties": {},
+            "type": "object"
+        },
+        "fullnameOverride": {
+            "type": "string"
+        },
+        "nameOverride": {
+            "type": "string"
+        },
+        "raw": {
+            "properties": {},
+            "type": "object"
+        },
+        "rawTemplatedRegex": {
+            "type": "string"
+        }
+    },
+    "type": "object"
+}

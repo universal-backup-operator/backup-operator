@@ -22,7 +22,7 @@ spec:
     nameOverride: victoria-metrics
     fullnameOverride: victoria-metrics
     alertmanager:
-      enabled: false
+      enabled: true
     defaultDashboardsEnabled: false
     defaultRules:
       create: false
@@ -55,7 +55,7 @@ spec:
       serviceMonitor:
         enabled: false
     vmalert:
-      enabled: false
+      enabled: true
     vmsingle:
       enabled: true
       spec:

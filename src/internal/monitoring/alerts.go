@@ -55,7 +55,7 @@ func RegisterAlerts(ctx context.Context, c client.Client) (err error) {
 	if alertsNamespace == "" {
 		namespaceFile := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 		var n []byte
-		if n, err = os.ReadFile(namespaceFile); err != nil {
+		if n, err = os.ReadFile(namespaceFile); err == nil {
 			alertsNamespace = string(n)
 		} else {
 			err = fmt.Errorf("alert rules namespace is not defined and could not be obtained from serviceAccount file: %s", err.Error())
@@ -105,7 +105,7 @@ func NewPrometheusRuleSpec() *prometheus.PrometheusRuleSpec {
 	rules = append(rules, func() (r []prometheus.Rule) {
 		for _, by := range []string{"namespace", "storage", "schedule", "state"} {
 			r = append(r, prometheus.Rule{
-				Record: fmt.Sprintf("%s:%s_run:count", by, metricsNamespace),
+				Record: fmt.Sprintf("%s_run_count_by_%s", metricsNamespace, by),
 				Expr: intstr.FromString(
 					fmt.Sprintf("count by (%s) (%s)", by, BackupOperatorRunStatusFullName),
 				),
@@ -118,7 +118,7 @@ func NewPrometheusRuleSpec() *prometheus.PrometheusRuleSpec {
 	rules = append(rules, func() (r []prometheus.Rule) {
 		for _, by := range []string{"namespace", "storage"} {
 			r = append(r, prometheus.Rule{
-				Record: fmt.Sprintf("%s:%s_schedule:count", by, metricsNamespace),
+				Record: fmt.Sprintf("%s_schedule_count_by_%s", metricsNamespace, by),
 				Expr: intstr.FromString(
 					fmt.Sprintf("count by (%s) (%s)", by, BackupOperatorScheduleStatusFullName),
 				),
@@ -129,7 +129,7 @@ func NewPrometheusRuleSpec() *prometheus.PrometheusRuleSpec {
 
 	// Add rule for counting backup operator storage
 	rules = append(rules, prometheus.Rule{
-		Record: fmt.Sprintf("%s_storage:count", metricsNamespace),
+		Record: fmt.Sprintf("%s_storage_count", metricsNamespace),
 		Expr: intstr.FromString(
 			fmt.Sprintf("count(%s)", BackupOperatorStorageStatusFullName),
 		),

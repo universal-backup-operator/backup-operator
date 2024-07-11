@@ -79,6 +79,12 @@ tasks:
       - kubectl apply --server-side -k config/default
       - kubectl get -o name deployment -l app.kubernetes.io/name=deployment | xargs kubectl rollout restart 
 
+  manifest:test:
+    desc: Create backup-operator sample resources
+    cmds:
+      - cmd: kubectl apply --server-side -k config/samples
+        ignore_errors: true
+
   chart:run:
     desc: Run backup-operator from chart
     cmds:

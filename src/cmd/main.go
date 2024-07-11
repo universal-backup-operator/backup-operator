@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -53,6 +52,8 @@ func init() {
 	utilruntime.Must(backupoperatoriov1.AddToScheme(scheme))
 
 	utilruntime.Must(prometheus.AddToScheme(scheme))
+
+	monitoring.RegisterMetrics()
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -126,9 +127,6 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	monitoring.RegisterMetrics()
-	monitoring.RegisterAlerts(context.Background(), mgr.GetClient())
 
 	if err = (&controller.BackupStorageReconciler{
 		Client:   mgr.GetClient(),

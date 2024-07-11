@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eo pipefail
+set -euo pipefail
 
 # We could save SVG as an Optimized SVG, but that would cause loss of some project data...
 # ...that is why we keep Inkscape SVG format with small crutches :)
