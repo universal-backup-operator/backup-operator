@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 29,
   "links": [],
   "panels": [
     {
@@ -91,7 +91,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "count(backup_operator_schedule_status{storage=~\"$storage\", namespace=\"$namespace\"})",
+          "expr": "count(backup_operator_schedule_status{cluster=~\"$cluster\", storage=~\"$storage\", namespace=~\"$namespace\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -156,7 +156,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "count(backup_operator_run_status{namespace=~\"$namespace\"})",
+          "expr": "count(backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -221,7 +221,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "count(backup_operator_run_status{namespace=~\"$namespace\", state=~\".*Successful.*\"})",
+          "expr": "count(backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", state=~\".*Successful.*\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -289,7 +289,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "count(backup_operator_run_status{namespace=~\"$namespace\", state=~\".*Failed.*\"})",
+          "expr": "count(backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", state=~\".*Failed.*\"})",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -354,7 +354,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum(backup_operator_run_backup_size_bytes{namespace=~\"$namespace\"} * on(namespace, name) group_left(storage) (backup_operator_run_status*0+1))",
+          "expr": "sum(backup_operator_run_backup_size_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"} * on(cluster, namespace, name) group_left(storage) (backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\"}*0+1))",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -426,7 +426,7 @@
             "uid": "P4169E866C3094E38"
           },
           "editorMode": "code",
-          "expr": "sum by (schedule) (backup_operator_run_backup_size_bytes{namespace=~\"$namespace\"} * on(namespace, name) group_left(storage, schedule) (backup_operator_run_status{schedule=~\"$schedule\"}*0+1))",
+          "expr": "sum by (schedule) (backup_operator_run_backup_size_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"} * on(cluster, namespace, name) group_left(storage, schedule) (backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\"}*0+1))",
           "format": "time_series",
           "instant": false,
           "legendFormat": "__auto",
@@ -463,7 +463,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "blue"
+                    "color": "blue",
+                    "value": null
                   }
                 ]
               }
@@ -501,7 +502,7 @@
                 "uid": "P4169E866C3094E38"
               },
               "editorMode": "code",
-              "expr": "count(backup_operator_run_status{namespace=~\"$namespace\", schedule=~\"$schedule\"})",
+              "expr": "count(backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\"})",
               "instant": false,
               "legendFormat": "__auto",
               "range": true,
@@ -523,12 +524,13 @@
               },
               "fieldMinMax": false,
               "mappings": [],
-              "noValue": "Never",
+              "noValue": "No",
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "red"
+                    "color": "red",
+                    "value": null
                   },
                   {
                     "color": "green",
@@ -570,7 +572,7 @@
                 "uid": "P4169E866C3094E38"
               },
               "editorMode": "code",
-              "expr": "count(backup_operator_run_status{namespace=~\"$namespace\", schedule=~\"$schedule\", state=~\".*Successful.*\"})",
+              "expr": "count(backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\", state=~\".*Successful.*\"})",
               "instant": false,
               "legendFormat": "__auto",
               "range": true,
@@ -591,12 +593,13 @@
                 "mode": "thresholds"
               },
               "mappings": [],
-              "noValue": "Never",
+              "noValue": "No",
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -638,7 +641,7 @@
                 "uid": "P4169E866C3094E38"
               },
               "editorMode": "code",
-              "expr": "count(backup_operator_run_status{namespace=~\"$namespace\", schedule=~\"$schedule\", state=~\".*Failed.*\"})",
+              "expr": "count(backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\", state=~\".*Failed.*\"})",
               "instant": false,
               "legendFormat": "__auto",
               "range": true,
@@ -663,7 +666,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "purple"
+                    "color": "purple",
+                    "value": null
                   }
                 ]
               },
@@ -702,7 +706,7 @@
                 "uid": "P4169E866C3094E38"
               },
               "editorMode": "code",
-              "expr": "sum(backup_operator_run_backup_size_bytes{namespace=~\"$namespace\"} * on(namespace, name) group_left(storage) (backup_operator_run_status{schedule=~\"$schedule\"}*0+1))",
+              "expr": "sum(backup_operator_run_backup_size_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"} * on(cluster, namespace, name) group_left(storage) (backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\"}*0+1))",
               "instant": false,
               "legendFormat": "__auto",
               "range": true,
@@ -735,7 +739,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -815,7 +820,13 @@
               "show": false
             },
             "frameIndex": 0,
-            "showHeader": true
+            "showHeader": true,
+            "sortBy": [
+              {
+                "desc": true,
+                "displayName": "Age"
+              }
+            ]
           },
           "pluginVersion": "10.4.3",
           "targets": [
@@ -826,7 +837,7 @@
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "sum by (name) (backup_operator_run_backup_size_bytes{namespace=~\"$namespace\"} * on(namespace, name) group_left(storage) (backup_operator_run_status{schedule=~\"$schedule\"}*0+1))",
+              "expr": "sum by (name) (backup_operator_run_backup_size_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"} * on(namespace, name) group_left(storage) (backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\"}*0+1))",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -841,7 +852,7 @@
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "sum by (name) (time() - backup_operator_run_status{schedule=~\"$schedule\"})",
+              "expr": "sum by (name) (time() - backup_operator_run_status{cluster=~\"$cluster\", namespace=~\"$namespace\", schedule=~\"$schedule\"})",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -877,10 +888,15 @@
   "templating": {
     "list": [
       {
+        "allValue": ".+",
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "aws/test"
+          ],
+          "value": [
+            "aws/test"
+          ]
         },
         "datasource": {
           "type": "prometheus",
@@ -905,6 +921,7 @@
         "type": "query"
       },
       {
+        "allValue": ".+",
         "current": {
           "selected": true,
           "text": [
@@ -937,6 +954,7 @@
         "type": "query"
       },
       {
+        "allValue": ".+",
         "current": {
           "selected": true,
           "text": [
@@ -969,7 +987,7 @@
         "type": "query"
       },
       {
-        "allValue": "",
+        "allValue": ".+",
         "current": {
           "selected": true,
           "text": [
@@ -1023,6 +1041,6 @@
   "timezone": "browser",
   "title": "Backup Operator",
   "uid": "bdr7z8itefytcd",
-  "version": 7,
+  "version": 1,
   "weekStart": ""
 }
