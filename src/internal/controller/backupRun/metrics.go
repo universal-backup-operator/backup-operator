@@ -31,11 +31,11 @@ func UpdateMetric(run *backupoperatoriov1.BackupRun) {
 	DeleteMetric(run)
 	monitoring.BackupOperatorRunStatus.WithLabelValues(
 		run.Namespace, run.Name, *run.Status.State, ownerName, run.Spec.Storage.Name, run.Spec.Storage.Path,
-	).SetToCurrentTime()
+	).Set(float64(run.CreationTimestamp.Time.Unix()))
 	if run.Status.SizeInBytes != nil {
 		monitoring.BackupOperatorRunBackupSizeBytes.WithLabelValues(
 			run.Namespace, run.Name,
-		).Add(float64(*run.Status.SizeInBytes))
+		).Set(float64(*run.Status.SizeInBytes))
 	}
 }
 

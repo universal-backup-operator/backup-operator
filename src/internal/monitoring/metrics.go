@@ -61,7 +61,7 @@ var (
 		Help:      "BackupRun execution status, hold time of last status change.",
 	}, []string{"namespace", "name", "state", "schedule", "storage", "path"})
 	BackupOperatorRunBackupSizeBytesFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "run", "backup_size_bytes")
-	BackupOperatorRunBackupSizeBytes         = prometheus.NewCounterVec(prometheus.CounterOpts{
+	BackupOperatorRunBackupSizeBytes         = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: metricsNamespace,
 		Subsystem: "run",
 		Name:      "backup_size_bytes",
@@ -70,10 +70,9 @@ var (
 	//  ┌─┐┬─┐┬─┐┬─┐┬─┐┌┐┐┌─┐┬─┐
 	//  │ ││─┘├─ │┬┘│─┤ │ │ ││┬┘
 	//  ┘─┘┘  ┴─┘┘└┘┘ ┘ ┘ ┘─┘┘└┘
-	BackupOperatorUptimeSecondsFullName = fmt.Sprintf("%s_%s_%s", metricsNamespace, "operator", "uptime_seconds")
+	BackupOperatorUptimeSecondsFullName = fmt.Sprintf("%s_%s", metricsNamespace, "uptime_seconds")
 	BackupOperatorUptimeSeconds         = prometheus.NewCounterFunc(prometheus.CounterOpts{
 		Namespace: metricsNamespace,
-		Subsystem: "operator",
 		Name:      "uptime_seconds",
 		Help:      "Operator uptime in seconds",
 	}, func() float64 { return time.Since(startTime).Seconds() })
