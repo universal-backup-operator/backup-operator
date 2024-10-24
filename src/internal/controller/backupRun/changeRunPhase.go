@@ -40,13 +40,15 @@ func ChangeRunState(ctx context.Context, c client.Client,
 		}
 		// We prepare reason, message and each condition status basing on ct we have received
 		var reason, message string
-		var inProgress, failed, successful metav1.ConditionStatus
+		state.Ready = false
+		state.NeverRun = false
+		state.InProgress = false
+		state.Failed = false
+		state.Successful = false
 		switch ct {
 		case backupoperatoriov1.BackupRunConditionTypeInProgress:
 			inProgressRuns.Store(run.UID, true)
-			inProgress = metav1.ConditionTrue
-			failed = metav1.ConditionFalse
-			successful = metav1.ConditionFalse
+			state.InProgress = true
 			switch {
 			case state.HaveToBackup:
 				reason = "Backuping"
@@ -62,10 +64,14 @@ func ChangeRunState(ctx context.Context, c client.Client,
 				run.Status.State = ptr.To("Unknown")
 			}
 		case backupoperatoriov1.BackupRunConditionTypeFailed:
-			inProgress = metav1.ConditionFalse
-			failed = metav1.ConditionTrue
-			successful = metav1.ConditionFalse
+			state.Failed = true
 			switch {
+			case state.NeverRun:
+				state.NeverRun = true // for retry
+				state.Failed = false
+				reason = "Error"
+				message = "Storage or access error"
+				run.Status.State = ptr.To("StorageError")
 			case state.HaveToBackup:
 				reason = "BackupFailed"
 				message = "Backup failed"
@@ -84,9 +90,8 @@ func ChangeRunState(ctx context.Context, c client.Client,
 				run.Status.State = ptr.To("Unknown")
 			}
 		case backupoperatoriov1.BackupRunConditionTypeSuccessful:
-			inProgress = metav1.ConditionFalse
-			failed = metav1.ConditionFalse
-			successful = metav1.ConditionTrue
+			state.Successful = true
+			state.Ready = true
 			switch {
 			case state.HaveToBackup:
 				reason = "BackupSuccessful"
@@ -107,8 +112,16 @@ func ChangeRunState(ctx context.Context, c client.Client,
 		}
 		run.Status.Conditions = *utils.AddOrUpdateConditions(run.Status.Conditions,
 			metav1.Condition{
+				Type:               backupoperatoriov1.ConditionTypeReady,
+				Status:             utils.ToConditionStatus(&state.Ready),
+				Reason:             reason,
+				Message:            message,
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: run.Generation,
+			},
+			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeNeverRun),
-				Status:             metav1.ConditionFalse,
+				Status:             utils.ToConditionStatus(&state.NeverRun),
 				Reason:             reason,
 				Message:            message,
 				LastTransitionTime: metav1.Now(),
@@ -116,7 +129,7 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeInProgress),
-				Status:             inProgress,
+				Status:             utils.ToConditionStatus(&state.InProgress),
 				Reason:             reason,
 				Message:            message,
 				LastTransitionTime: metav1.Now(),
@@ -124,7 +137,7 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeFailed),
-				Status:             failed,
+				Status:             utils.ToConditionStatus(&state.Failed),
 				Reason:             reason,
 				Message:            message,
 				LastTransitionTime: metav1.Now(),
@@ -132,7 +145,7 @@ func ChangeRunState(ctx context.Context, c client.Client,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeSuccessful),
-				Status:             successful,
+				Status:             utils.ToConditionStatus(&state.Successful),
 				Reason:             reason,
 				Message:            message,
 				LastTransitionTime: metav1.Now(),

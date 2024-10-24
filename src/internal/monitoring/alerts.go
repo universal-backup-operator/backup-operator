@@ -47,7 +47,7 @@ func RegisterAlerts(ctx context.Context, c client.Client) (err error) {
 
 	// Check if alerts are disabled or already initialized
 	if !alertsEnabled || alertsInitialized {
-		log.Info("alert rules creation is disabled")
+		log.V(1).Info("alert rules creation is disabled")
 		return
 	}
 

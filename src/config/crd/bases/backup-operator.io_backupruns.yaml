@@ -17,24 +17,13 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: Readiness marker
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
     - description: State
       jsonPath: .status.state
       name: State
-      type: string
-    - description: Can be restored automatically
-      jsonPath: .status.conditions[?(@.type=="Restorable")].status
-      name: Restorable
-      priority: 1
-      type: string
-    - description: Encryption status
-      jsonPath: .status.conditions[?(@.type=="Encrypted")].status
-      name: Encrypted
-      priority: 1
-      type: string
-    - description: Compression status
-      jsonPath: .status.conditions[?(@.type=="Compressed")].status
-      name: Compressed
-      priority: 1
       type: string
     - description: Path to file in BackupStorage
       jsonPath: .spec.storage.path

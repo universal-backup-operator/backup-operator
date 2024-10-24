@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Delete all InProgress Runs that particular Schedule has
-func DeleteInProgressRuns(ctx context.Context, c client.Client, schedule *backupoperatoriov1.BackupSchedule) (err error) {
+// Delete all InProgress and NeverRun Runs that particular Schedule has
+func DeleteInProgressAndStaleRuns(ctx context.Context, c client.Client, schedule *backupoperatoriov1.BackupSchedule) (err error) {
 	// Get all child runs...
 	childRuns := &backupoperatoriov1.BackupRunList{}
 	if err = c.List(ctx, childRuns, client.InNamespace(schedule.Namespace),

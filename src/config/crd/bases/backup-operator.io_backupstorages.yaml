@@ -17,6 +17,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Readiness
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
     - description: Storage type
       jsonPath: .spec.type
       name: Type

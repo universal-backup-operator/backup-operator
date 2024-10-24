@@ -6,14 +6,11 @@ resources:
 - storage.yaml
 - working
 # Uncomment to try to deploy tests that definitely fail
-- broken
+# - broken
 labels:
   - pairs:
       app.kubernetes.io/name: backup-operator-sample
       app.kubernetes.io/instance: backup-operator-sample
-      app.kubernetes.io/part-of: backup-operator
-      app.kubernetes.io/managed-by: kustomize
-      app.kubernetes.io/created-by: backup-operator
     includeSelectors: true
     includeTemplates: true
 secretGenerator:

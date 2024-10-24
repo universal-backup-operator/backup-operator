@@ -99,10 +99,8 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 		// DELETED or ERROR
 		// Handle error except of absent object
 		if !errors.IsNotFound(err) {
-			log.V(1).Info("lifecycle could not fetch an object, probably some permissions issue")
-			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
+			Log(r, log, err, r.Object, "FailedGet", "could not get an object")
 		}
-		log.V(1).Info("lifecycle could not fetch an object because it does not exist")
 		return result, client.IgnoreNotFound(err)
 	}
 	// Prepare finalizer name
@@ -113,9 +111,9 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 	if !r.Object.GetDeletionTimestamp().IsZero() {
 		// DELETING
 		// The object is being deleted
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonFinalizing, "Deleting")
+		Log(r, log, err, r.Object, "Reconciliation", "deleting the object")
 		if result, err = m.Destructor(ctx, r); err != nil {
-			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
+			Log(r, log, err, r.Object, "FailedDeletion", "failed to delete the object")
 			return
 		}
 		// The object is to be rescheduled, but no error
@@ -125,18 +123,19 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 		// Removing finalizer
 		if controllerutil.ContainsFinalizer(r.Object, finalizer) {
 			// Remove our finalizer
-			if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err = retry.RetryOnConflict(retry.DefaultRetry, func() (err error) {
 				if err = r.Client.Get(ctx, client.ObjectKeyFromObject(r.Object), r.Object); err != nil {
-					return err
+					return
 				}
 				controllerutil.RemoveFinalizer(r.Object, finalizer)
 				return r.Client.Update(ctx, r.Object)
 			}); client.IgnoreNotFound(err) != nil {
-				r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
+				Log(r, log, err, r.Object, "FailedRemoveFinalizer", "failed to remove a finalizer")
 				return
 			}
 		}
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonDeleted, "Deleted")
+		err = client.IgnoreNotFound(err)
+		Log(r, log, err, r.Object, "DeletionCompleted", "deletion has been completed successfully")
 		// Remove from constructed
 		processed.Delete(r.Object.GetUID())
 		return
@@ -145,9 +144,9 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 	// Registering finalizer
 	if !controllerutil.ContainsFinalizer(r.Object, finalizer) {
 		// Add operator finalizer
-		if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err = retry.RetryOnConflict(retry.DefaultRetry, func() (err error) {
 			if err = r.Client.Get(ctx, client.ObjectKeyFromObject(r.Object), r.Object); err != nil {
-				return err
+				return
 			}
 			controllerutil.AddFinalizer(r.Object, finalizer)
 			return r.Client.Update(ctx, r.Object)
@@ -162,7 +161,6 @@ func ManageLifecycle(ctx context.Context, r *ManagedLifecycleReconcile, m Manage
 			r.Recorder.Eventf(r.Object, corev1.EventTypeWarning, EventReasonFailed, "%s", err.Error())
 			return
 		}
-		r.Recorder.Eventf(r.Object, corev1.EventTypeNormal, EventReasonReconciled, "Successfully reconciled")
 	}
 	// Run Processor callback
 	if result, err = m.Processor(ctx, r); err != nil {

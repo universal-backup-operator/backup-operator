@@ -32,7 +32,6 @@ import (
 	backupschedule "backup-operator.io/internal/controller/backupSchedule"
 	"backup-operator.io/internal/controller/utils"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -91,7 +90,7 @@ func (b *backupScheduleLifecycle) Destructor(ctx context.Context, r *utils.Manag
 	schedule := r.Object.(*backupoperatoriov1.BackupSchedule)
 	log := log.FromContext(ctx)
 	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(schedule), schedule); err != nil {
-		log.V(1).Info("could not fetch an object")
+		utils.Log(r, log, err, schedule, "FailedGet", "could not get the schedule")
 		return
 	}
 	backupschedule.DeleteMetric(schedule)
@@ -106,19 +105,19 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 	schedule := r.Object.(*backupoperatoriov1.BackupSchedule)
 	log := log.FromContext(ctx)
 	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(schedule), schedule); err != nil {
-		log.V(1).Info("could not fetch an object")
+		utils.Log(r, log, err, schedule, "FailedGet", "could not get the schedule")
 		return
 	}
-	log.V(1).Info("schedule processing")
 	// Update the status
 	if err = backupschedule.UpdateScheduleStatus(ctx, r.Client, schedule); err != nil {
+		utils.Log(r, log, err, schedule, "FailedUpdateStatus", "failed to update the status")
 		return
 	}
 	// Update metrics
 	backupschedule.UpdateMetric(schedule)
 	// Check if we suspended
 	if backupschedule.CheckScheduleSuspended(schedule) {
-		log.V(1).Info("schedule is suspended, skipping")
+		utils.Log(r, log, err, schedule, "Skipping", "schedule is suspended")
 		return result, nil
 	}
 	// Delete old runs if limit is set...
@@ -129,7 +128,7 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 			return
 		}
 		if count > 0 {
-			log.V(1).Info("deleted failed runs above the limit", "count", count)
+			utils.Log(r, log, err, schedule, "DeletedFailedRuns", fmt.Sprintf("deleted %d failed runs", count))
 		}
 	}
 	if schedule.Spec.SuccessfulRunsHistoryLimit != nil {
@@ -139,14 +138,14 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 			return
 		}
 		if count > 0 {
-			log.V(1).Info("deleted successful runs above the limit", "count", count)
+			utils.Log(r, log, err, schedule, "DeletedSuccessfulRuns", fmt.Sprintf("deleted %d successful runs", count))
 		}
 	}
 	// Figure out the next times that we need to create
 	// runs at (or anything we missed).
 	var missedRun, nextRun time.Time
 	if missedRun, nextRun, err = backupschedule.ParseScheduleCron(schedule, time.Now()); err != nil {
-		log.Error(err, "unable to figure out next schedule run time")
+		utils.Log(r, log, err, schedule, "FailedScheduleCalc", "unable to figure out the next scheduled run time")
 		// We don't really care about requeuing until we get an update that
 		// Fixes the schedule, so don't return an error
 		return result, nil
@@ -171,14 +170,13 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 	// Current run must appear as missed run, because we are reconciled instantly after the schedule
 	// If missed run is empty, then we are launched for the first time or something bad has happened
 	if missedRun.IsZero() {
-		log.V(1).Info("no upcoming scheduled times, sleeping until the next")
 		return result, nil
 	} else if schedule.Status.LastScheduleTime != nil {
 		log = log.WithValues("missedRun", missedRun, "lastScheduleTime", schedule.Status.LastScheduleTime.String())
-		if time.Since(schedule.Status.LastScheduleTime.Time) < time.Minute {
-			// If we have scheduled less than a minute ago - exit without an error
-			return result, nil
-		}
+		// if time.Since(schedule.Status.LastScheduleTime.Time) < time.Minute {
+		// 	// If we have scheduled less than a minute ago - exit without an error
+		// 	return result, nil
+		// }
 	}
 	// Make sure we're not too late to start the run
 	tooLate := false
@@ -188,9 +186,9 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 			Before(time.Now())
 	}
 	if tooLate {
-		msg := "missed starting deadline for last run, sleeping till next"
-		log.V(1).Info(msg)
-		r.Recorder.Eventf(schedule, corev1.EventTypeWarning, "MissedTime", msg)
+		utils.Log(r, log, err, schedule, "MissedTime",
+			"missed the starting deadline for the last run, waiting until the next scheduled time",
+		)
 		return result, nil
 	}
 	// Figure out how to run -- concurrency policy might forbid us from running multiple backups...
@@ -201,21 +199,25 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 			return
 		}
 		if count > 0 {
-			log.V(1).Info("concurrency policy blocks concurrent runs, skipping", "runsInProgressCount", count)
+			utils.Log(r, log, err, schedule, "NoConcurrency",
+				fmt.Sprintf("concurrency policy blocks concurrent runs, skipping because there are %d in progress runs", count),
+			)
 			return
 		}
 	case batchv1.ReplaceConcurrent:
-		log.V(1).Info("deleting in progress runs according to .spec.concurrencyPolicy")
-		if err = backupschedule.DeleteInProgressRuns(ctx, r.Client, schedule); err != nil {
+		utils.Log(r, log, err, schedule, "DeletingOldInProgressRuns",
+			"deleting in progress runs according to .spec.concurrencyPolicy",
+		)
+		if err = backupschedule.DeleteInProgressAndStaleRuns(ctx, r.Client, schedule); err != nil {
 			return
 		}
 	}
 	// Create new run
-	log.V(1).Info("creating new run")
-	if err = backupschedule.CreateRunFromSchedule(ctx, r.Client, r.Scheme, schedule,
-		fmt.Sprintf("%s-%d", schedule.Name, missedRun.Unix())); err != nil {
+	runName := fmt.Sprintf("%s-%d", schedule.Name, missedRun.Unix())
+	utils.Log(r, log, err, schedule, "CreatingRun", fmt.Sprintf("creating BackupRun %s", runName))
+	if err = backupschedule.CreateRunFromSchedule(ctx, r.Client, r.Scheme, schedule, runName); err != nil {
 		// No need to fail, we will be rescheduled anyway
-		log.Error(err, "failed to create a BackupRun")
+		utils.Log(r, log, err, schedule, "FailedCreateRun", "failed to create the BackupRun")
 	}
 	// Update the status
 	if err = backupschedule.UpdateScheduleStatus(ctx, r.Client, schedule); err != nil {
@@ -223,13 +225,6 @@ func (b *backupScheduleLifecycle) Processor(ctx context.Context, r *utils.Manage
 	}
 	// Update metrics
 	backupschedule.UpdateMetric(schedule)
-	// Logging information about runs
-	log.V(1).Info("runs count",
-		"total", schedule.Status.Total,
-		"inProgress", schedule.Status.InProgress,
-		"successful", schedule.Status.Successful,
-		"failed", schedule.Status.Failed,
-	)
 	return
 }
 
@@ -259,6 +254,5 @@ func (r *BackupScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&backupoperatoriov1.BackupSchedule{}).
 		Owns(&backupoperatoriov1.BackupRun{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
-		WithEventFilter(utils.IgnoreOutOfOrder()).
 		Complete(r)
 }

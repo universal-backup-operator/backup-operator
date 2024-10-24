@@ -24,6 +24,8 @@ import (
 )
 
 type BackupRunState struct {
+	// True if ready
+	Ready bool
 	// True if compression is enabled
 	Compressed bool
 	// True if restoration is available
@@ -77,6 +79,8 @@ func AnalyzeRunConditions(run *backupoperatoriov1.BackupRun) (s *BackupRunState)
 	}
 	// Check either runs is successful or failed and not in progress
 	s.Completed = !s.InProgress && (s.Successful || s.Failed)
+	// Check readiness
+	s.Ready = s.Completed && s.Successful
 	// Either we never run and .status.mode is empty at all
 	s.NeverRun = !(s.InProgress || s.Successful || s.Failed)
 	// Checking annotation

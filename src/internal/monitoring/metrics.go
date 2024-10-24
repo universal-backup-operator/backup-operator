@@ -78,6 +78,8 @@ var (
 	}, func() float64 { return time.Since(startTime).Seconds() })
 )
 
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;watch;create;update;patch;delete
+
 // RegisterMetrics registers all metrics in the Metrics map with Prometheus's global registry.
 func RegisterMetrics() {
 	metrics.Registry.MustRegister(BackupOperatorStorageStatus)

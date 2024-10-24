@@ -10,6 +10,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "src/cmd/main.go",
+      "args": ["--zap-stacktrace-level=panic"],
       "env": {
         "KUBECONFIG": "${workspaceFolder}/src/kubeconfig.yaml",
         "ENABLE_WEBHOOKS": "false",

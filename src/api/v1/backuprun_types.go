@@ -225,10 +225,8 @@ Backup is streamed to the BackupStorage through compression\encryption processor
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=br
+//+kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`,description="Readiness marker"
 //+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`,description="State"
-//+kubebuilder:printcolumn:name="Restorable",type=string,JSONPath=`.status.conditions[?(@.type=="Restorable")].status`,description="Can be restored automatically",priority=1
-//+kubebuilder:printcolumn:name="Encrypted",type=string,JSONPath=`.status.conditions[?(@.type=="Encrypted")].status`,description="Encryption status",priority=1
-//+kubebuilder:printcolumn:name="Compressed",type=string,JSONPath=`.status.conditions[?(@.type=="Compressed")].status`,description="Compression status",priority=1
 //+kubebuilder:printcolumn:name="Path",type=string,JSONPath=`.spec.storage.path`,description="Path to file in BackupStorage",priority=1
 //+kubebuilder:printcolumn:name="Size",type=string,JSONPath=`.status.size`,description="Backup file size",priority=1
 //+kubebuilder:printcolumn:name="Age",type=date,format=date-time,JSONPath=`.metadata.creationTimestamp`,description="Creation timestamp"

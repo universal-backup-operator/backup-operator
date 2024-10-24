@@ -85,10 +85,11 @@ func Restore(ctx context.Context, c client.Client, s *runtime.Scheme,
 	var stdin io.ReadCloser
 	// This will be passed to pod exec
 	exec := &podExecParameters{
-		Stdin:   nil, // Stdin will be set below
-		Stdout:  nil, // Restore does not have stdout
-		Stderr:  os.Stderr,
-		Command: append(action.Command, action.Args...),
+		Stdin:              nil, // Stdin will be set below
+		Stdout:             nil, // Restore does not have stdout
+		Stderr:             os.Stderr,
+		Command:            append(action.Command, action.Args...),
+		CreateStubChannels: true,
 	}
 	if action.DeadlineSeconds != nil {
 		exec.Timeout = ptr.To[time.Duration](time.Second * time.Duration(*action.DeadlineSeconds))

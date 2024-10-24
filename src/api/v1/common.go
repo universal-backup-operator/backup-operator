@@ -32,3 +32,8 @@ type TemplateMetadata struct {
 	//+kubebuilder:validation:Optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,2,rep,name=annotations"`
 }
+
+const (
+	// Readiness marker
+	ConditionTypeReady string = "Ready"
+)

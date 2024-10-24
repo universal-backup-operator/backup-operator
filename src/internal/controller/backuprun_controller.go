@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -84,92 +85,89 @@ type backupRunLifecycle struct{}
 func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
 	run := r.Object.(*backupoperatoriov1.BackupRun)
 	log := log.FromContext(ctx)
-	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
-		log.V(1).Info("could not fetch an object")
-		return
-	}
 	// Setting up different flag conditions
 	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
+			utils.Log(r, log, err, run, "FailedGet", "could not get the run")
 			return err
 		}
 		// Analyse the run
 		state := backuprun.AnalyzeRunConditions(run)
-		// Condition status and message variables
-		var restorableMsg, encryptedMsg, compressedMsg string
 		// Check encryption
 		if state.Encrypted {
-			encryptedMsg = run.Spec.Encryption.Recipients[0]
-		} else {
-			encryptedMsg = "Not encrypted"
+			r.Recorder.Eventf(run, corev1.EventTypeNormal, "Encryption",
+				fmt.Sprintf("recipients count %d", len(run.Spec.Encryption.Recipients)),
+			)
 		}
 		// Check compression
 		if state.Compressed {
-			compressedMsg = string(run.Spec.Compression.Algorithm)
-		} else {
-			compressedMsg = "Not compressed"
-		}
-		// Check restoration
-		if state.Restorable {
-			restorableMsg = "Restorable"
-		} else if state.Encrypted && run.Spec.Restore != nil {
-			restorableMsg = "No decryption key provided"
+			r.Recorder.Eventf(run, corev1.EventTypeNormal, "Compression",
+				fmt.Sprintf("%s with level %d", run.Spec.Compression.Algorithm, run.Spec.Compression.Level),
+			)
 		}
 		// Create respective conditions
 		run.Status.Conditions = *utils.AddConditions(run.Status.Conditions,
 			metav1.Condition{
+				Type:               backupoperatoriov1.ConditionTypeReady,
+				Status:             utils.ToConditionStatus(&state.Ready),
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: run.Generation,
+			},
+			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeNeverRun),
 				Status:             utils.ToConditionStatus(&state.NeverRun),
-				Reason:             utils.EventReasonCreated,
-				Message:            utils.EventReasonCreated,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeInProgress),
 				Status:             utils.ToConditionStatus(&state.InProgress),
-				Reason:             utils.EventReasonCreated,
-				Message:            utils.EventReasonCreated,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeFailed),
 				Status:             utils.ToConditionStatus(&state.Failed),
-				Reason:             utils.EventReasonCreated,
-				Message:            utils.EventReasonCreated,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeSuccessful),
 				Status:             utils.ToConditionStatus(&state.Successful),
-				Reason:             utils.EventReasonCreated,
-				Message:            utils.EventReasonCreated,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeRestorable),
 				Status:             utils.ToConditionStatus(&state.Restorable),
-				Reason:             utils.EventReasonCreated,
-				Message:            restorableMsg,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeEncrypted),
 				Status:             utils.ToConditionStatus(&state.Encrypted),
-				Reason:             utils.EventReasonCreated,
-				Message:            encryptedMsg,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
 			metav1.Condition{
 				Type:               string(backupoperatoriov1.BackupRunConditionTypeCompressed),
 				Status:             utils.ToConditionStatus(&state.Compressed),
-				Reason:             utils.EventReasonCreated,
-				Message:            compressedMsg,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: run.Generation,
 			},
@@ -180,7 +178,7 @@ func (b *backupRunLifecycle) Constructor(ctx context.Context, r *utils.ManagedLi
 		return
 	}
 	// Finish initialization
-	r.Recorder.Eventf(run, corev1.EventTypeNormal, "Reconciled", "Successfully reconciled")
+	utils.Log(r, log, err, run, "Reconciled", "initialized the object after operator (re)start")
 	return
 }
 
@@ -193,28 +191,29 @@ func (b *backupRunLifecycle) Destructor(ctx context.Context, r *utils.ManagedLif
 	var ok bool
 	log := log.FromContext(ctx)
 	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
-		log.V(1).Info("could not fetch an object")
+		utils.Log(r, log, err, run, "FailedGet", "could not get the run")
 		return
 	}
-	log.V(1).Info("starting run deletion")
+	utils.Log(r, log, err, run, "StartingDeletion", "starting deletion of the run")
 	// Deleting metric
 	backuprun.DeleteMetric(run)
+	// Analyse the run
+	state := backuprun.AnalyzeRunConditions(run)
 	// Delete backup from storage...
-	if *run.Spec.RetainPolicy == backupoperatoriov1.BackupRetainDelete {
+	if *run.Spec.RetainPolicy == backupoperatoriov1.BackupRetainDelete && state.Completed {
 		// ...if retain is set to Delete
-		log.V(1).Info("trying to delete backup from storage according to spec.retainPolicy=Delete")
 		var storage backupstorage.BackupStorageProvider
 		if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
-			log.V(1).Info("failed to get backupStorageProvider", "storageName", run.Spec.Storage.Name)
-			r.Recorder.Eventf(run, corev1.EventTypeWarning, "Deletion", "Failed to find the storage, ignore if operator has restarted recently")
+			utils.Log(r, log, fmt.Errorf("FailedFindStorage"), run, "FailedFindStorage",
+				fmt.Sprintf("no storage provider with name %s found, ignore if operator has restarted recently", run.Spec.Storage.Name),
+			)
 			result.RequeueAfter = time.Second * 5
 			return
 		}
 		log = log.WithValues("storageName", run.Spec.Storage.Name, "backupPath", run.Spec.Storage.Path)
-		log.V(1).Info("deleting backup")
+		utils.Log(r, log, err, run, "DeletingFromStorage", fmt.Sprintf("deleting backup at %s", run.Spec.Storage.Path))
 		if err = storage.Delete(ctx, run.Spec.Storage.Path); err != nil {
-			log.V(1).Error(err, "failed to delete the backup")
-			r.Recorder.Eventf(run, corev1.EventTypeWarning, "Deletion", "Failed to delete the backup", "error", err.Error())
+			utils.Log(r, log, err, run, "FailedDeletion", "failed to delete the backup from storage")
 			result.RequeueAfter = time.Minute
 			return
 		}
@@ -231,22 +230,14 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	var ok bool
 	log := log.FromContext(ctx)
 	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
-		log.V(1).Info("could not fetch an object")
-		return
-	}
-	log.V(1).Info("run processing")
-	// Trying to get backup storage provider...
-	var storage backupstorage.BackupStorageProvider
-	if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
-		// ...if fail - reschedule
-		r.Recorder.Eventf(run, corev1.EventTypeWarning, "NoStorage", "Storage is not ready: %s", run.Spec.Storage.Name)
-		result.RequeueAfter = time.Second * 20
+		utils.Log(r, log, err, run, "FailedGet", "could not get the run")
 		return
 	}
 	// Analyze run conditions
 	state := backuprun.AnalyzeRunConditions(run)
+	// Check interruption
 	if state.Interrupted {
-		r.Recorder.Eventf(run, corev1.EventTypeWarning, "Failure", "Run has been interrupted")
+		utils.Log(r, log, fmt.Errorf("InterruptedRun"), run, "InterruptedRun", "run has been interrupted by some reason")
 		backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
 		return
 	}
@@ -256,8 +247,21 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 		backuprun.UpdateMetric(run)
 		return
 	}
+	// Trying to get backup storage provider...
+	var storage backupstorage.BackupStorageProvider
+	if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
+		// ...if fail - reschedule
+		utils.Log(r, log, fmt.Errorf("FailedFindStorage"), run, "FailedFindStorage",
+			fmt.Sprintf("no storage provider with name %s found, ignore if operator has restarted recently", run.Spec.Storage.Name),
+		)
+		backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
+		result.RequeueAfter = time.Second * 20
+		return
+	}
 	// Set InProgress to true
+	utils.Log(r, log, err, run, "InProgress", "run is in progress")
 	if err = backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeInProgress, state); err != nil {
+		utils.Log(r, log, err, run, "FailedChangeState", "failed to change the state")
 		return
 	}
 	// Create Pod
@@ -269,37 +273,38 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 		Spec: *run.Spec.Template.Spec.DeepCopy(),
 	}
 	log = log.WithValues("pod", pod.Name)
-	log.V(1).Info("run preparing new pod")
+	utils.Log(r, log, err, run, "CreatingPod", fmt.Sprintf("creating pod %s", pod.Name))
 	if err = backuprun.CreatePodFromRun(ctx, r.Client, r.Scheme, r.Config, run, pod); err != nil {
-		log.V(1).Error(err, "failed to create run pod")
+		utils.Log(r, log, err, run, "FailedCreatePod", "failed to create the pod")
 		// Fail the run
 		backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
 		return
 	}
 	// Schedule pod deletion at the end of function
 	defer func() {
-		log.V(1).Info("deleting run pod")
+		utils.Log(r, log, err, run, "DeletingPod", fmt.Sprintf("deleting pod %s", pod.Name))
 		if err = r.Client.Delete(ctx, pod, &client.DeleteOptions{
 			PropagationPolicy: ptr.To(metav1.DeletePropagationForeground),
 		}); err != nil {
-			log.Error(err, "failed to delete backup run pod at the very end")
+			utils.Log(r, log, err, run, "FailedDeletePod", "failed to delete the pod")
 			return
 		}
 	}()
 	// Backup or Restore
 	switch {
 	case state.HaveToBackup:
-		log.V(1).Info("run calling backup action")
+		utils.Log(r, log, err, run, "MakingBackup", "creating a new backup")
 		if err = backuprun.Backup(ctx, r.Client, r.Scheme, r.Config, run, pod, storage); err != nil {
+			utils.Log(r, log, err, run, "FailedBackup", "failed to make a backup")
 			backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
 			return
 		}
 		if err = backuprun.SetBackupSizeInStatus(ctx, r.Client, run, storage); err != nil {
-			log.V(1).Error(err, "failed to set backup size")
+			utils.Log(r, log, err, run, "FailedSetBackupSize", "failed to set backup size in status")
 			// No need to fail, that is not critical
 		}
 	case state.HaveToRestore:
-		log.V(1).Info("run calling restore action")
+		utils.Log(r, log, err, run, "RestoringBackup", "restoring a backup")
 		// First clean restore annotation
 		utils.SetAnnotations(ctx, r.Client, run, func() (a map[string]string) {
 			a = make(map[string]string)
@@ -314,11 +319,11 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 		if err = backuprun.Restore(ctx, r.Client, r.Scheme, r.Config, run, pod, storage); err != nil {
 			backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
 			// Make failure restoration event
-			r.Recorder.Eventf(run, corev1.EventTypeWarning, "Restoration", "Restoration has failed")
+			utils.Log(r, log, err, run, "FailedRestore", "failed to restore a backup")
 			return
 		}
 		// Make successful restoration event and update annotations
-		r.Recorder.Eventf(run, corev1.EventTypeNormal, "Restoration", "Restoration has been completed successfully")
+		utils.Log(r, log, err, run, "RestorationCompleted", "restoration has been completed successfully")
 		utils.SetAnnotations(ctx, r.Client, run, func() (a map[string]string) {
 			a = run.GetAnnotations()
 			if a == nil {
@@ -332,7 +337,6 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	if err = backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeSuccessful, state); err != nil {
 		return
 	}
-	log.V(1).Info("finished backup run")
 	return
 }
 
@@ -362,7 +366,5 @@ func (r *BackupRunReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&backupoperatoriov1.BackupRun{}).
 		Owns(&corev1.Pod{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
-		WithEventFilter(utils.IgnoreOutOfOrder()).
-		WithEventFilter(utils.IgnoreDeletionPredicate()).
 		Complete(r)
 }

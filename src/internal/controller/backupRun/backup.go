@@ -52,10 +52,11 @@ func Backup(ctx context.Context, c client.Client, s *runtime.Scheme,
 	var encryptionWriter io.WriteCloser
 	// This will be passed to pod exec
 	exec := &podExecParameters{
-		Stdin:   nil, // Backup does not have stdin
-		Stdout:  nil, // Stdout will be set below
-		Stderr:  os.Stdout,
-		Command: append(action.Command, action.Args...),
+		Stdin:              nil, // Backup does not have stdin
+		Stdout:             nil, // Stdout will be set below
+		Stderr:             os.Stdout,
+		Command:            append(action.Command, action.Args...),
+		CreateStubChannels: true,
 	}
 	if action.DeadlineSeconds != nil {
 		exec.Timeout = ptr.To(time.Second * time.Duration(*action.DeadlineSeconds))

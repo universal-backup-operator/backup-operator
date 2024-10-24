@@ -19,6 +19,7 @@ package backupstorage
 import (
 	"context"
 	"io"
+	"sync"
 
 	backupoperatoriov1 "backup-operator.io/api/v1"
 )
@@ -44,24 +45,27 @@ type BackupStorageProvider interface {
 }
 
 // All initialized backup storage providers objects
-var backupStorageProviders = map[string]BackupStorageProvider{}
+var backupStorageProviders sync.Map
 
 // Get backup storage provider by name
 func GetBackupStorageProvider(name string) (storage BackupStorageProvider, ok bool) {
-	storage, ok = backupStorageProviders[name]
+	var value any
+	if value, ok = backupStorageProviders.Load(name); ok {
+		storage, ok = value.(BackupStorageProvider)
+	}
 	return
 }
 
 // Add backup storage provider by name
 func AddBackupStorageProvider(name string, storage BackupStorageProvider) {
-	backupStorageProviders[name] = storage
+	backupStorageProviders.Store(name, storage)
 }
 
 // Remove backup storage provider by name
 func RemoveBackupStorageProvider(name string) (ok bool) {
-	if _, ok = backupStorageProviders[name]; ok {
+	if _, ok = backupStorageProviders.Load(name); ok {
 		// Remove if exists...
-		delete(backupStorageProviders, name)
+		backupStorageProviders.Delete(name)
 	}
 	// ...and do not raise any error in case if it is absent
 	return

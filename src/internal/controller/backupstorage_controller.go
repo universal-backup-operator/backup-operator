@@ -94,6 +94,27 @@ var storageProvidersConfigurationHashes = &sync.Map{}
 // └─┘┘─┘┘└┘──┘ ┘ ┘└┘┘─┘ ┘ ┘─┘┘└┘
 
 func (b *backupStorageLifecycle) Constructor(ctx context.Context, r *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
+	storage := r.Object.(*backupoperatoriov1.BackupStorage)
+	log := log.FromContext(ctx)
+	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			utils.Log(r, log, err, storage, "FailedGet", "could not get the storage")
+			return err
+		}
+		storage.Status.Conditions = *utils.AddOrUpdateConditions(storage.Status.Conditions,
+			metav1.Condition{
+				Type:               backupoperatoriov1.ConditionTypeReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             utils.EventReasonInitializing,
+				Message:            utils.EventReasonInitializing,
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: storage.Generation,
+			},
+		)
+		return r.Client.Status().Update(ctx, storage)
+	}); err != nil {
+		return
+	}
 	return
 }
 
@@ -105,14 +126,14 @@ func (b *backupStorageLifecycle) Destructor(ctx context.Context, r *utils.Manage
 	storage := r.Object.(*backupoperatoriov1.BackupStorage)
 	log := log.FromContext(ctx)
 	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-		log.V(1).Info("could not fetch an object")
+		utils.Log(r, log, err, storage, "FailedGet", "could not get the storage")
 		return
 	}
 	// Annotation backupoperatoriov1.AnnotationDeletionProtection is honored in validation deletion webhook
 	// Destruct provider
 	if provider, ok := backupstorage.GetBackupStorageProvider(storage.Name); ok {
 		if err = provider.Destructor(); err != nil {
-			log.Error(err, "failed to destruct storage provider")
+			utils.Log(r, log, err, storage, "FailedDeletion", "failed to delete the storage")
 		}
 		backupstorage.RemoveBackupStorageProvider(storage.Name)
 	}
@@ -131,7 +152,7 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 	storage := r.Object.(*backupoperatoriov1.BackupStorage)
 	log := log.FromContext(ctx)
 	if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-		log.V(1).Info("could not fetch an object")
+		utils.Log(r, log, err, storage, "FailedGet", "could not get the storage")
 		return
 	}
 	credentials := make(map[string]string)
@@ -143,7 +164,9 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 		secret.Namespace = storage.Spec.Credentials.Namespace
 		// Read credentials secret
 		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-			err = fmt.Errorf("failed to fetch credentials secret: %s", err.Error())
+			err = fmt.Errorf("could not get credentials secret: %s", err.Error())
+			utils.Log(r, log, err, storage, "FailedGetCredentials", "")
+			backupstorage.ChangeStorageReadiness(ctx, r.Client, storage, false, err.Error())
 			return
 		}
 		credentials = utils.DecodeSecretData(secret)
@@ -156,48 +179,54 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 		if !providerExists {
 			provider = &backupstorageproviders.S3Storage{}
 			if err = defaults.Set(provider); err != nil {
-				err = fmt.Errorf("failed to default provider object: %s", err.Error())
+				err = fmt.Errorf("could not set default provider settings: %s", err.Error())
+				utils.Log(r, log, err, storage, "FailedSetDefaults", "")
+				backupstorage.ChangeStorageReadiness(ctx, r.Client, storage, false, err.Error())
 				return
 			}
 		}
 	default:
 		// Error if type is unknown
 		err = fmt.Errorf("unknown storage type: %s", storage.Spec.Type)
+		utils.Log(r, log, err, storage, "UnknownType", "")
+		backupstorage.ChangeStorageReadiness(ctx, r.Client, storage, false, err.Error())
 		return
 	}
 	// Configure provider
 	hash := utils.Hash(storage.Spec.Parameters, credentials)
 	// If has differs or not found...
-	if oldHash, found := storageProvidersConfigurationHashes.Load(storage.UID); !found || hash != oldHash {
+	_, found := backupstorage.GetBackupStorageProvider(storage.Name)
+	var oldHash any
+	if oldHash, _ = storageProvidersConfigurationHashes.Load(storage.UID); !found || hash != oldHash {
 		// ...and construct provider (for the first time or again, does not matter)
 		if err = provider.Constructor(storage, storage.Spec.Parameters, credentials); err != nil {
-			err = fmt.Errorf("failed to configure provider %s: %s", storage.Spec.Type, err.Error())
-			r.Recorder.Eventf(storage, corev1.EventTypeWarning, utils.EventReasonFailed, err.Error())
+			err = fmt.Errorf("could not configure the provider %s: %s", storage.Spec.Type, err.Error())
+			utils.Log(r, log, err, storage, "FailedConfigure", "")
+			backupstorage.ChangeStorageReadiness(ctx, r.Client, storage, false, err.Error())
 			return
 		}
-		if found || hash != oldHash {
-			r.Recorder.Eventf(storage, corev1.EventTypeNormal, utils.EventReasonReconciled, "Provider has been successfully reconfigured")
-		}
+		utils.Log(r, log, err, storage, "Reconciled", "(Re)configured successfully")
 		// ...save hash
 		storageProvidersConfigurationHashes.Store(storage.UID, hash)
+		// Add backup storage provider to memory
+		backupstorage.AddBackupStorageProvider(storage.Name, provider)
 	}
-	// Add backup storage provider to memory
-	backupstorage.AddBackupStorageProvider(storage.Name, provider)
 	// Count child schedules
 	if err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err = r.Client.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			utils.Log(r, log, err, storage, "FailedGet", "could not get the storage")
 			return err
 		}
 		// List child schedules
 		childSchedules := &backupoperatoriov1.BackupScheduleList{}
 		if err = r.List(ctx, childSchedules, client.MatchingFields{".spec.template.spec.storage.name": storage.Name}); err != nil {
-			log.V(0).Error(err, "unable to list child schedules")
+			utils.Log(r, log, err, storage, "FailedGet", "could not list child schedules")
 			return err
 		}
 		// List child runs
 		childRuns := &backupoperatoriov1.BackupRunList{}
 		if err = r.List(ctx, childRuns, client.MatchingFields{".spec.storage.name": storage.Name}); err != nil {
-			log.V(0).Error(err, "unable to list child runs")
+			utils.Log(r, log, err, storage, "FailedGet", "could not list child runs")
 			return err
 		}
 		var childRunsSizeInBytes uint = 0
@@ -210,8 +239,10 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 		storage.Status.Runs = ptr.To(uint16(len(childRuns.Items)))
 		storage.Status.SizeInBytes = ptr.To(childRunsSizeInBytes)
 		storage.Status.Size = ptr.To(utils.ConvertBytesToHumanReadable(childRunsSizeInBytes))
+		backupstorage.ChangeStorageReadiness(ctx, r.Client, storage, true, "Provider object is reconfigured and ready to work")
 		return r.Client.Status().Update(ctx, storage)
 	}); err != nil {
+		backupstorage.ChangeStorageReadiness(ctx, r.Client, storage, false, err.Error())
 		return
 	}
 	// Update metrics
@@ -264,6 +295,5 @@ func (r *BackupStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}),
 		).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
-		WithEventFilter(utils.IgnoreOutOfOrder()).
 		Complete(r)
 }

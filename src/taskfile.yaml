@@ -77,7 +77,9 @@ tasks:
     cmds:
       - task: image:push
       - kubectl apply --server-side -k config/default
-      - kubectl get -o name deployment -l app.kubernetes.io/name=deployment | xargs kubectl rollout restart 
+      - |-
+        kubectl -n system get -o name deployment -l app.kubernetes.io/name=backup-operator | \
+        xargs kubectl -n system rollout restart 
 
   manifest:test:
     desc: Create backup-operator sample resources

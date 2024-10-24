@@ -65,5 +65,6 @@ func DeleteRunsAboveTheLimit(ctx context.Context, c client.Client, schedule *bac
 			count++
 		}
 	}
+	err = client.IgnoreNotFound(err)
 	return
 }
