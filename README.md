@@ -11,10 +11,75 @@ Operator controls creation and **restoration** of backups. You create *BackupSto
 
 ## Getting started
 
+### Helm
+
 ```shell
 helm repo add backup-operator https://helm-charts.backup-operator.io/
 helm repo update
 helm install backup-operator backup-operator/backup-operator
+```
+
+### Manifest
+
+```shell
+kubectl apply -f https://github.com/universal-backup-operator/backup-operator/releases/latest/download/install.yaml
+```
+
+## CLI args
+
+There is a list of CLI args you can append to manager args in the deployment to tune the behaviour.
+
+```shell
+--health-probe-bind-address string
+    The address the probe endpoint binds to. (default ":8081")
+--kubeconfig string
+    Paths to a kubeconfig. Only required if out-of-cluster.
+--leader-elect
+    Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.
+--zap-devel
+    Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error) (default true)
+--zap-encoder value
+    Zap log encoding (one of 'json' or 'console')
+--zap-log-level value
+    Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', or any integer value > 0 which corresponds to custom debug levels of increasing verbosity
+--zap-stacktrace-level value
+    Zap Level at and above which stacktraces are captured (one of 'info', 'error', 'panic').
+--zap-time-encoding value
+    Zap time encoding (one of 'epoch', 'millis', 'nano', 'iso8601', 'rfc3339' or 'rfc3339nano'). Defaults to 'epoch'.
+```
+
+Example kustomization to add arguments.
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/universal-backup-operator/backup-operator/releases/latest/download/install.yaml
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args
+        value:
+          - --leader-elect=true
+          - --zap-devel=false
+          - --zap-log-level=debug
+          - --zap-encoder=console
+          - --zap-stacktrace-level=panic
+          - --health-probe-bind-address=:8081
+          - --metrics-bind-address=127.0.0.1:8080
+    target:
+      kind: Deployment
+      name: backup-operator.+
+## Uncomment if you want to disable creation of custom namespace and plan to use system one instead
+#  - patch: |-
+#      $patch: delete
+#      apiVersion: v1
+#      kind: Namespace
+#      metadata:
+#        name: _
+#    target:
+#      kind: Namespace
+#namespace: kube-system
 ```
 
 ## Annotations
