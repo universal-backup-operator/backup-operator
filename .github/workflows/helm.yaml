@@ -8,9 +8,7 @@ on:
   # Runs on pushes targeting the default branch
   push:
     tags:
-      - "v*"
-    tags-ignore:
-      - "-rc[0-9]+"
+      - v*
   # Allows you to run this workflow manually from the Actions tab
   # It is useful, when you update chart, but version stays the same...
   # ...pipeline won't start and build the chart automatically, so...
