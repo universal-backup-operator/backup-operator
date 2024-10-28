@@ -38,7 +38,7 @@ spec:
           args:
             - --leader-elect=true
             - --zap-devel=false
-            - --zap-log-level=debug
+            - --zap-log-level=info
             - --zap-encoder=console
             - --zap-stacktrace-level=panic
           securityContext:
