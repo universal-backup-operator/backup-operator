@@ -57,6 +57,6 @@ jobs:
         with:
           generate_release_notes: true
           make_latest: ${{ steps.version.outputs.latest }}
-          files: |-
+          files: |
             install.yaml
             crds.yaml
