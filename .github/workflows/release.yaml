@@ -52,9 +52,6 @@ jobs:
       - name: CRDs Build
         run: cat src/config/crd/bases/* | tee crds.yaml
 
-      - name: Check release candidate
-        run: 
-
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
