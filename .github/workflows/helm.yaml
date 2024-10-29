@@ -71,6 +71,7 @@ jobs:
         with:
           cmd: |-
             yq -i '.appVersion = "${{ env.VERSION }}"' charts/backup-operator/Chart.yaml
+            yq -i '.version = "${{ env.VERSION }}"' charts/backup-operator/Chart.yaml
             cat charts/backup-operator/Chart.yaml
 
       - name: Run chart-releaser
