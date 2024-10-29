@@ -28,13 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// log is for logging in this package.
-var backupschedulelog = logf.Log.WithName("backupschedule-resource")
 
 func (r *BackupSchedule) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -48,19 +44,16 @@ var _ webhook.Validator = &BackupSchedule{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupSchedule) ValidateCreate() (admission.Warnings, error) {
-	backupschedulelog.Info("validate create", "name", r.Name)
 	return nil, r.validateBackupSchedule()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupSchedule) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	backupschedulelog.Info("validate update", "name", r.Name)
 	return nil, r.validateBackupSchedule()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupSchedule) ValidateDelete() (admission.Warnings, error) {
-	backupschedulelog.Info("validate delete", "name", r.Name)
 	return nil, nil
 }
 

@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -48,8 +49,9 @@ var _ webhook.Defaulter = &BackupRun{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *BackupRun) Default() {
-	backuprunlog.Info("default", "name", r.Name)
-	r.TemplateStoragePath()
+	if err := r.TemplateStoragePath(); err != nil {
+		backuprunlog.Error(err, "Defaulting failed: ", "BackupRun", client.ObjectKeyFromObject(r).String())
+	}
 }
 
 // TemplateStoragePath renders the backup path template and validates the result.
@@ -91,19 +93,16 @@ var _ webhook.Validator = &BackupRun{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupRun) ValidateCreate() (admission.Warnings, error) {
-	backuprunlog.Info("validate create", "name", r.Name)
 	return nil, r.validateBackupRun()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupRun) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	backuprunlog.Info("validate update", "name", r.Name)
 	return nil, r.validateBackupRun()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupRun) ValidateDelete() (admission.Warnings, error) {
-	backuprunlog.Info("validate delete", "name", r.Name)
 	return nil, nil
 }
 

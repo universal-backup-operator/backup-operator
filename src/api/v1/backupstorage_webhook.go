@@ -22,13 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// log is for logging in this package.
-var backupstoragelog = logf.Log.WithName("backupstorage-resource")
 
 func (r *BackupStorage) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -43,7 +39,6 @@ var _ webhook.Defaulter = &BackupStorage{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 // Launched on CREATE only
 func (r *BackupStorage) Default() {
-	backupstoragelog.Info("default", "name", r.Name)
 	a := r.GetAnnotations()
 	if a == nil {
 		a = make(map[string]string)
@@ -58,19 +53,16 @@ var _ webhook.Validator = &BackupStorage{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupStorage) ValidateCreate() (admission.Warnings, error) {
-	backupstoragelog.Info("validate create", "name", r.Name)
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupStorage) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	backupstoragelog.Info("validate update", "name", r.Name)
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupStorage) ValidateDelete() (admission.Warnings, error) {
-	backupstoragelog.Info("validate delete", "name", r.Name)
 	return nil, r.validateBackupStorageDeletion()
 }
 
