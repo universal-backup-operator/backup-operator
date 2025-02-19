@@ -3,7 +3,7 @@ version: 2
 project_name: backup-operator
 before:
   hooks:
-    - cd src && go mod tidy
+    - sh -c 'cd src && go mod tidy'
 report_sizes: true
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
