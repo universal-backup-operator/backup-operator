@@ -86,6 +86,9 @@ jobs:
               yq -i '.release += {"make_latest":false}' src/.goreleaser.yaml
             fi
 
+      - name: Copy LICENSE and README.md to src/
+        run: cp -fv LICENSE README.md src/
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
