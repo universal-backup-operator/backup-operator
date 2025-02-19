@@ -9,7 +9,7 @@ metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
 builds:
   - id: default
-    main: ./cmd/main.go
+    main: ./src/cmd/main.go
     goos:
       - linux
     goarch:
@@ -32,8 +32,8 @@ archives:
       owner: root
       mtime: "{{ .CommitDate }}"
     files:
-      - ../LICENSE
-      - ../README.md
+      - LICENSE
+      - README.md
 checksum:
   name_template: "checksums.txt"
 changelog:
@@ -94,4 +94,4 @@ dockers:
       - "--label=org.opencontainers.image.version={{.Version}}"
 release:
   extra_files:
-    - glob: ./extra-release-files/**/*
+    - glob: ./extra-release-files/*

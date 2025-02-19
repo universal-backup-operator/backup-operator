@@ -49,7 +49,7 @@ jobs:
           password: ${{ github.token }}
 
       - name: Create extra-release-files directory
-        run: mkdir src/extra-release-files
+        run: mkdir extra-release-files
 
       #  ┬┌ ┬ ┐┐─┐┌┐┐┌─┐┌┌┐o┌─┐┬─┐
       #  ├┴┐│ │└─┐ │ │ │││││┌─┘├─ 
@@ -68,10 +68,10 @@ jobs:
           cmd: yq -i "${TEMPLATE}" src/config/manager/kustomization.yaml
 
       - name: Kustomize Build
-        run: kustomize build src/config/default | tee src/extra-release-files/install.yaml
+        run: kustomize build src/config/default | tee extra-release-files/install.yaml
 
       - name: CRDs Build
-        run: cat src/config/crd/bases/* | tee src/extra-release-files/crds.yaml
+        run: cat src/config/crd/bases/* | tee extra-release-files/crds.yaml
 
       #  ┬─┐┬─┐┬  ┬─┐┬─┐┐─┐┬─┐
       #  │┬┘├─ │  ├─ │─┤└─┐├─ 
@@ -89,7 +89,6 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          workdir: src
           distribution: goreleaser
           args: release --clean --fail-fast --skip=docker,validate
         env:
