@@ -31,3 +31,4 @@ local/
 
 # mkdocs artifact
 site
+dist

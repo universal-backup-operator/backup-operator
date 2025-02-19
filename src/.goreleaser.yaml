@@ -32,8 +32,8 @@ archives:
       owner: root
       mtime: "{{ .CommitDate }}"
     files:
-      - LICENSE
-      - README.md
+      - ../LICENSE
+      - ../README.md
 checksum:
   name_template: "checksums.txt"
 changelog:
