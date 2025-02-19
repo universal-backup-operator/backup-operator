@@ -87,21 +87,21 @@ patches:
 ### BackupRun
 
 | Name | Description |
-|-------------|-------|
+|-------------|------------|
 | `backup-operator.io/keep` | Set to any value and BackupSchedule won't delete this run during the rotation |
-| `backup-operator.io/restored-at` | It is set by operator after the restoration is completed successfully |
 | `backup-operator.io/restore` | Set to any value in case if you want to restore the backup |
+| `backup-operator.io/restored-at` | It is set by operator after the restoration is completed successfully |
 
 ### BackupSchedule
 
 | Name | Description |
-|-------------|-------|
+|-------------|------------|
 | `backup-operator.io/trigger` | Can be set to any value to trigger schedule manually |
 
 ### BackupStorage
 
 | Name | Description |
-|-------------|-------|
+|-------------|------------|
 | `backup-operator.io/deletion-protection` | Is set automatically and prevents accidental storage deletion |
 
 ## Monitoring

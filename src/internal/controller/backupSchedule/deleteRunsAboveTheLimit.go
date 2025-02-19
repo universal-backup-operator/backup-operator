@@ -29,7 +29,8 @@ import (
 
 // Function to deletes runs above the limit and return count of deleted runs
 func DeleteRunsAboveTheLimit(ctx context.Context, c client.Client, schedule *backupoperatoriov1.BackupSchedule,
-	ct backupoperatoriov1.BackupRunConditionType, limit uint16) (count uint16, err error) {
+	ct backupoperatoriov1.BackupRunConditionType, limit uint16,
+) (count uint16, err error) {
 	count = 0
 	// Get all child runs...
 	childRuns := &backupoperatoriov1.BackupRunList{}

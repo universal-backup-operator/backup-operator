@@ -36,7 +36,8 @@ The function handles different scenarios based on whether the provided error is 
     The log entry includes the specified reason and a detailed message including the error's string representation.
 */
 func Log(m *ManagedLifecycleReconcile, l logr.Logger, err error, o runtime.Object,
-	reason string, message string) {
+	reason string, message string,
+) {
 	switch err {
 	case nil:
 		l.V(1).Info(message)

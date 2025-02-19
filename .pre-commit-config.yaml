@@ -2,18 +2,29 @@
 #  │─┘│┬┘├─ ──│  │ ││││││││ │ 
 #  ┘  ┘└┘┴─┘  └─┘┘─┘┘ ┘┘ ┘┘ ┘ 
 
+fail_fast: true
 repos:
 - repo: https://github.com/zricethezav/gitleaks
-  rev: v8.15.2
+  rev: v8.23.3
   hooks:
   - id: gitleaks
     args:
     - --config=gitleaks.toml
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v5.0.0
   hooks:
-    - id: check-merge-conflict
-    - id: end-of-file-fixer
+    - name: No merge conflicts
+      id: check-merge-conflict
+    - name: End of files to have a newline
+      id: end-of-file-fixer
+    - name: Executables have shebang
+      id: check-executables-have-shebangs
+    - name: Symlinks are valid
+      id: check-symlinks
+    - name: No submodules
+      id: forbid-submodules
+    - name: No mixed line ending
+      id: mixed-line-ending
 - repo: local
   hooks:
     - id: inkscape-anonimize
@@ -25,7 +36,7 @@ repos:
       pass_filenames: true
     - id: helm-values-json-schema
       name: Generate Helm values JSON schemas
-      entry: etc/hooks/helm-schema.sh
+      entry: etc/hooks/helm-values-json-schema.sh
       language: script
       files: ^charts/.*/values.yaml$
       types: [file]
@@ -36,4 +47,27 @@ repos:
       language: script
       files: .*README.*
       types: [file]
+      pass_filenames: false
+    - id: go-mod-tidy
+      name: Go mod tidy
+      description: Install packages and clean lock
+      entry: sh -c 'cd src && go mod tidy'
+      types: [go]
+      language: golang
+      pass_filenames: false
+    # https://github.com/golangci/golangci-lint/blob/master/.pre-commit-hooks.yaml
+    - id: golangci-lint-config-verify
+      name: Verify .golangci.yaml
+      description: Verifies the configuration file
+      entry: sh -c 'cd src && golangci-lint config verify'
+      files: '\.golangci\.(?:yml|yaml|toml|json)'
+      language: golang
+      pass_filenames: false
+    - id: golangci-lint
+      name: Lint Go
+      description: Fast linters runner for Go. Note that only modified files are linted, so linters like 'unused' that need to scan all files won't work as expected.
+      entry: sh -c 'cd src && GOGC=10 golangci-lint run --fix'
+      types: [go]
+      language: golang
+      require_serial: true
       pass_filenames: false

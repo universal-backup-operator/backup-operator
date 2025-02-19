@@ -33,18 +33,6 @@ type secretKeyReference struct {
 }
 
 /* Secret reference. */
-type secretReference struct {
-	/* Secret name. */
-	//+kubebuilder:validation:MinLength=1
-	Name string `json:"name" protobuf:"bytes,1,req,name=name"`
-
-	/* Secret namespace. */
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Optional
-	Namespace *string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
-}
-
-/* Secret reference. */
 type secretReferenceRequireNamespace struct {
 	/* Secret name. */
 	//+kubebuilder:validation:MinLength=1

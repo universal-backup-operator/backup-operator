@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Updates counters and active runs in schedule.status
+// UpdateScheduleStatus updates counters and active runs in schedule.status
 func UpdateScheduleStatus(ctx context.Context, c client.Client, schedule *backupoperatoriov1.BackupSchedule) (err error) {
 	// Prepare and update the status...
 	old := schedule.DeepCopy()
@@ -44,9 +44,9 @@ func UpdateScheduleStatus(ctx context.Context, c client.Client, schedule *backup
 			return err
 		}
 		// ...and counting them by state...
-		var inProgressRuns = []*backupoperatoriov1.BackupRun{}
-		var successfulRuns = []*backupoperatoriov1.BackupRun{}
-		var failedRuns = []*backupoperatoriov1.BackupRun{}
+		inProgressRuns := []*backupoperatoriov1.BackupRun{}
+		successfulRuns := []*backupoperatoriov1.BackupRun{}
+		failedRuns := []*backupoperatoriov1.BackupRun{}
 		var mostRecentSuccessful, mostResentFailed *metav1.Time
 		// Also, we locate...
 		for i, run := range childRuns.Items {

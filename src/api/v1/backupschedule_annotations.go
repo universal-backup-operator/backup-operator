@@ -20,7 +20,5 @@ import (
 	"fmt"
 )
 
-var (
-	// Can be set to trigger schedule manually
-	AnnotationTriggerSchedule = fmt.Sprintf("%s/trigger", GroupVersion.Group)
-)
+// Can be set to trigger schedule manually
+var AnnotationTriggerSchedule = fmt.Sprintf("%s/trigger", GroupVersion.Group)

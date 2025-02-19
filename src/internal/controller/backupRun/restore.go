@@ -18,6 +18,7 @@ package backuprun
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -36,17 +37,17 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// Make a restore run
-func Restore(ctx context.Context, c client.Client, s *runtime.Scheme,
+// Restore Make a restore run
+func Restore(ctx context.Context, c client.Client, _ *runtime.Scheme,
 	config *rest.Config, run *backupoperatoriov1.BackupRun,
-	pod *corev1.Pod, storage backupstorage.BackupStorageProvider) (err error) {
-
+	pod *corev1.Pod, storage backupstorage.BackupStorageProvider,
+) (err error) {
 	state := AnalyzeRunConditions(run)
 	action := run.Spec.Restore
 
 	// Check that backup is restorable
 	if !state.Restorable {
-		err = fmt.Errorf("backup is not restorable, but restore has been requested")
+		err = errors.New("backup is not restorable, but restore has been requested")
 		return
 	}
 	// Create a reader from storage

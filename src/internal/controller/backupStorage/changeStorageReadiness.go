@@ -29,7 +29,8 @@ import (
 
 // Change run conditions and status according to the new state
 func ChangeStorageReadiness(ctx context.Context, c client.Client,
-	storage *backupoperatoriov1.BackupStorage, ready bool, reason string) (err error) {
+	storage *backupoperatoriov1.BackupStorage, ready bool, reason string,
+) (err error) {
 	oldReady, err := utils.GetConditionByType(&storage.Status.Conditions, backupoperatoriov1.ConditionTypeReady)
 	if err == nil && oldReady.Status != utils.ToConditionStatus(&ready) {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {

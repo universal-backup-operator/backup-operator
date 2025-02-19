@@ -37,13 +37,11 @@ func CountInProgressRuns(ctx context.Context, c client.Client, schedule *backupo
 	for _, run := range childRuns.Items {
 		// ...find ones...
 		for _, condition := range run.Status.Conditions {
-			switch condition.Type {
-			case string(backupoperatoriov1.BackupRunConditionTypeInProgress):
-				// ...that are in progress...
-				if condition.Status == metav1.ConditionTrue {
-					// ...and count them
-					count++
-				}
+			// ...that are in progress...
+			if condition.Type == string(backupoperatoriov1.BackupRunConditionTypeInProgress) &&
+				condition.Status == metav1.ConditionTrue {
+				// ...and count them
+				count++
 			}
 		}
 	}

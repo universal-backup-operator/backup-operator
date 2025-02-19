@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -204,7 +205,7 @@ func (b *backupRunLifecycle) Destructor(ctx context.Context, r *utils.ManagedLif
 		// ...if retain is set to Delete
 		var storage backupstorage.BackupStorageProvider
 		if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
-			utils.Log(r, log, fmt.Errorf("FailedFindStorage"), run, "FailedFindStorage",
+			utils.Log(r, log, errors.New("FailedFindStorage"), run, "FailedFindStorage",
 				fmt.Sprintf("no storage provider with name %s found, ignore if operator has restarted recently", run.Spec.Storage.Name),
 			)
 			result.RequeueAfter = time.Second * 5
@@ -237,7 +238,7 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	state := backuprun.AnalyzeRunConditions(run)
 	// Check interruption
 	if state.Interrupted {
-		utils.Log(r, log, fmt.Errorf("InterruptedRun"), run, "InterruptedRun", "run has been interrupted by some reason")
+		utils.Log(r, log, errors.New("InterruptedRun"), run, "InterruptedRun", "run has been interrupted by some reason")
 		backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
 		return
 	}
@@ -251,7 +252,7 @@ func (b *backupRunLifecycle) Processor(ctx context.Context, r *utils.ManagedLife
 	var storage backupstorage.BackupStorageProvider
 	if storage, ok = backupstorage.GetBackupStorageProvider(run.Spec.Storage.Name); !ok {
 		// ...if fail - reschedule
-		utils.Log(r, log, fmt.Errorf("FailedFindStorage"), run, "FailedFindStorage",
+		utils.Log(r, log, errors.New("FailedFindStorage"), run, "FailedFindStorage",
 			fmt.Sprintf("no storage provider with name %s found, ignore if operator has restarted recently", run.Spec.Storage.Name),
 		)
 		backuprun.ChangeRunState(ctx, r.Client, run, backupoperatoriov1.BackupRunConditionTypeFailed, state)
@@ -350,7 +351,7 @@ var backupRunIndexers = map[string]client.IndexerFunc{
 	},
 	".spec.storage.name": func(o client.Object) []string {
 		run := o.(*backupoperatoriov1.BackupRun)
-		return []string{string(run.Spec.Storage.Name)}
+		return []string{run.Spec.Storage.Name}
 	},
 }
 

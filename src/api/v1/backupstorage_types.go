@@ -27,6 +27,7 @@ import (
 type storageType string
 
 const (
+	// S3 storage type name
 	S3 storageType = "s3"
 )
 

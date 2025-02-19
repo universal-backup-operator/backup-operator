@@ -10,29 +10,50 @@ on:
       - v*
 
 permissions:
+  packages: write
   contents: write
 
 jobs:
-  build:
-    name: Release
+  release:
     runs-on: ubuntu-latest
+    name: Release
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache docker-images.txt
+        uses: actions/cache/restore@v4
+        with:
+          path: docker-images.txt
+          key: docker-images.txt-${{ github.sha }}
+          fail-on-cache-miss: true
+
       - name: Install kustomize
         uses: imranismail/setup-kustomize@v2
 
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Install Helm
+        uses: azure/setup-helm@v4
 
-      - name: Process version tag
-        id: version
-        run: |-
-          echo "${{ github.ref_name }}" | sed -r 's/^v//' |
-          xargs printf "version=%s\n" | tee -a "$GITHUB_OUTPUT"
-          if echo "${{ github.ref_name }}" | grep -qE -- '-rc[0-9]+$'; then
-            echo latest=false | tee -a "$GITHUB_OUTPUT"
-          else
-            echo latest=true | tee -a "$GITHUB_OUTPUT"
-          fi
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Create extra-release-files directory
+        run: mkdir src/extra-release-files
+
+      #  ┬┌ ┬ ┐┐─┐┌┐┐┌─┐┌┌┐o┌─┐┬─┐
+      #  ├┴┐│ │└─┐ │ │ │││││┌─┘├─ 
+      #  ┘ ┘┘─┘──┘ ┘ ┘─┘┘ ┘┘└─┘┴─┘
 
       - name: Update image tag
         uses: mikefarah/yq@v4
@@ -47,16 +68,58 @@ jobs:
           cmd: yq -i "${TEMPLATE}" src/config/manager/kustomization.yaml
 
       - name: Kustomize Build
-        run: kustomize build src/config/default | tee install.yaml
+        run: kustomize build src/config/default | tee src/extra-release-files/install.yaml
 
       - name: CRDs Build
-        run: cat src/config/crd/bases/* | tee crds.yaml
+        run: cat src/config/crd/bases/* | tee src/extra-release-files/crds.yaml
 
-      - name: Release
-        uses: softprops/action-gh-release@v2
+      #  ┬─┐┬─┐┬  ┬─┐┬─┐┐─┐┬─┐
+      #  │┬┘├─ │  ├─ │─┤└─┐├─ 
+      #  ┘└┘┴─┘┘─┘┴─┘┘ ┘──┘┴─┘
+
+      - name: Check release tag
+        uses: mikefarah/yq@v4
         with:
-          generate_release_notes: true
-          make_latest: "${{ steps.version.outputs.latest }}"
-          files: |
-            install.yaml
-            crds.yaml
+          cmd: |-
+            if [[ '${{ github.ref_name }}' =~ -rc ]]; then
+              echo "::notice::Marking as not latest"
+              yq -i '.release += {"make_latest":false}' src/.goreleaser.yaml
+            fi
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          workdir: src
+          distribution: goreleaser
+          args: release --clean --fail-fast --skip docker
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Docker create manifest
+        run: >-
+          cat docker-images.txt |
+          xargs docker buildx imagetools create --tag 'ghcr.io/${{ github.repository }}:${{ github.ref_name }}'
+
+      #  ┬ ┬┬─┐┬  ┌┌┐
+      #  │─┤├─ │  │││
+      #  ┘ ┴┴─┘┘─┘┘ ┘
+
+      - name: Update chart appVersion
+        uses: mikefarah/yq@v4
+        with:
+          cmd: |-
+            yq -i '.appVersion = "${{ github.ref_name }}"' charts/backup-operator/Chart.yaml
+            yq -i '.version = "${{ github.ref_name }}"' charts/backup-operator/Chart.yaml
+            cat charts/backup-operator/Chart.yaml
+
+      - name: Push chart
+        uses: appany/helm-oci-chart-releaser@v0.4.2
+        with:
+          name: chart
+          repository: ${{ github.repository }}
+          tag: ${{ github.ref_name }}
+          path: charts/backup-operator
+          registry: ghcr.io
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ github.token }}
+          update_dependencies: 'true'

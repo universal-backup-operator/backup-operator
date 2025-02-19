@@ -20,7 +20,5 @@ import (
 	"fmt"
 )
 
-var (
-	// Is set automatically and prevent storage deletion
-	AnnotationDeletionProtection = fmt.Sprintf("%s/deletion-protection", GroupVersion.Group)
-)
+// AnnotationDeletionProtection Is set automatically and prevent storage deletion
+var AnnotationDeletionProtection = fmt.Sprintf("%s/deletion-protection", GroupVersion.Group)

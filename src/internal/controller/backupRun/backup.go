@@ -37,10 +37,10 @@ import (
 )
 
 // Make a backup run
-func Backup(ctx context.Context, c client.Client, s *runtime.Scheme,
+func Backup(ctx context.Context, _ client.Client, _ *runtime.Scheme,
 	config *rest.Config, run *backupoperatoriov1.BackupRun,
-	pod *corev1.Pod, storage backupstorage.BackupStorageProvider) (err error) {
-
+	pod *corev1.Pod, storage backupstorage.BackupStorageProvider,
+) (err error) {
 	state := AnalyzeRunConditions(run)
 	action := run.Spec.Backup
 

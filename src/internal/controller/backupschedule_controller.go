@@ -78,7 +78,7 @@ type backupScheduleLifecycle struct{}
 // │  │ ││││└─┐ │ │┬┘│ │ │ │ ││┬┘
 // └─┘┘─┘┘└┘──┘ ┘ ┘└┘┘─┘ ┘ ┘─┘┘└┘
 
-func (b *backupScheduleLifecycle) Constructor(ctx context.Context, r *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
+func (b *backupScheduleLifecycle) Constructor(_ context.Context, _ *utils.ManagedLifecycleReconcile) (result ctrl.Result, err error) {
 	return
 }
 
@@ -238,7 +238,7 @@ var backupScheduleIndexers = map[string]client.IndexerFunc{
 	},
 	".spec.template.spec.storage.name": func(o client.Object) []string {
 		schedule := o.(*backupoperatoriov1.BackupSchedule)
-		return []string{string(schedule.Spec.Template.Spec.Storage.Name)}
+		return []string{schedule.Spec.Template.Spec.Storage.Name}
 	},
 }
 

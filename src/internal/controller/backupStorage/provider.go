@@ -47,7 +47,7 @@ type BackupStorageProvider interface {
 // All initialized backup storage providers objects
 var backupStorageProviders sync.Map
 
-// Get backup storage provider by name
+// GetBackupStorageProvider Get backup storage provider by name
 func GetBackupStorageProvider(name string) (storage BackupStorageProvider, ok bool) {
 	var value any
 	if value, ok = backupStorageProviders.Load(name); ok {
@@ -56,12 +56,12 @@ func GetBackupStorageProvider(name string) (storage BackupStorageProvider, ok bo
 	return
 }
 
-// Add backup storage provider by name
+// AddBackupStorageProvider Add backup storage provider by name
 func AddBackupStorageProvider(name string, storage BackupStorageProvider) {
 	backupStorageProviders.Store(name, storage)
 }
 
-// Remove backup storage provider by name
+// RemoveBackupStorageProvider Remove backup storage provider by name
 func RemoveBackupStorageProvider(name string) (ok bool) {
 	if _, ok = backupStorageProviders.Load(name); ok {
 		// Remove if exists...

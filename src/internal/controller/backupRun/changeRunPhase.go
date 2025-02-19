@@ -29,11 +29,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Change run conditions and status according to the new state
+// ChangeRunState changes run conditions and status according to the new state
 func ChangeRunState(ctx context.Context, c client.Client,
 	run *backupoperatoriov1.BackupRun, ct backupoperatoriov1.BackupRunConditionType,
-	state *BackupRunState) (err error) {
-
+	state *BackupRunState,
+) (err error) {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() (err error) {
 		if err = c.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
 			return err

@@ -26,8 +26,8 @@ import (
 
 // Prepare compression and encryption objects
 func getEncryptorAndCompressor(run *backupoperatoriov1.BackupRun) (
-	e encryption.Encryption, c compression.Compression, err error) {
-
+	e encryption.Encryption, c compression.Compression, err error,
+) {
 	state := AnalyzeRunConditions(run)
 	if state.Encrypted {
 		// Create standard encryptor...

@@ -50,7 +50,7 @@ type S3Storage struct {
 	object *backupoperatoriov1.BackupStorage
 }
 
-// Configure S3
+// Constructor Configure S3
 func (s *S3Storage) Constructor(object *backupoperatoriov1.BackupStorage, parameters map[string]string, creds map[string]string) (err error) {
 	// Set object field
 	if object == nil {
@@ -139,12 +139,12 @@ func (s *S3Storage) Constructor(object *backupoperatoriov1.BackupStorage, parame
 	return
 }
 
-// S3 storage object destructor.
+// Destructor S3 storage object destructor.
 func (s *S3Storage) Destructor() error {
 	return nil
 }
 
-// Upload file.
+// Put Upload file.
 func (s *S3Storage) Put(ctx context.Context, path string, reader io.Reader) error {
 	// Upload the file to S3/MinIO bucket
 	_, err := s.uploader.UploadWithContext(ctx, &s3manager.UploadInput{
@@ -156,7 +156,7 @@ func (s *S3Storage) Put(ctx context.Context, path string, reader io.Reader) erro
 	return err
 }
 
-// Download file.
+// Get Download file.
 func (s *S3Storage) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	output, err := s.s3svc.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: &s.Bucket,
@@ -178,7 +178,7 @@ func (s *S3Storage) List(ctx context.Context, path string) ([]string, error) {
 	return list, err
 }
 
-// Remove path
+// Delete Remove path
 func (s *S3Storage) Delete(ctx context.Context, path string) error {
 	_, err := s.s3svc.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: &s.Bucket,

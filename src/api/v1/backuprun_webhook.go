@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -27,14 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// log is for logging in this package.
-var backuprunlog = logf.Log.WithName("backuprun-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *BackupRun) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -45,13 +42,20 @@ func (r *BackupRun) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 //+kubebuilder:webhook:path=/mutate-backup-operator-io-v1-backuprun,mutating=true,failurePolicy=fail,sideEffects=None,groups=backup-operator.io,resources=backupruns,verbs=create;update,versions=v1,name=mbackuprun.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &BackupRun{}
+var _ webhook.CustomDefaulter = &BackupRun{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *BackupRun) Default() {
-	if err := r.TemplateStoragePath(); err != nil {
-		backuprunlog.Error(err, "Defaulting failed: ", "BackupRun", client.ObjectKeyFromObject(r).String())
+func (r *BackupRun) Default(ctx context.Context, obj runtime.Object) (err error) {
+	log := log.FromContext(ctx)
+	run, ok := obj.(*BackupRun)
+	if !ok {
+		return fmt.Errorf("expected a BackupRun but got a %T", obj)
 	}
+	log.V(1).Info("Validating BackupRun")
+	if err := run.TemplateStoragePath(); err != nil {
+		log.Error(err, "Defaulting failed")
+	}
+	return
 }
 
 // TemplateStoragePath renders the backup path template and validates the result.
@@ -79,57 +83,61 @@ func (r *BackupRun) TemplateStoragePath() (err error) {
 	var regex *regexp.Regexp
 	if regex, err = regexp.Compile(backupPathPattern); err != nil {
 		err = fmt.Errorf("failed to compile backup path regex: %s", err.Error())
-	} else {
-		if !regex.MatchString(r.Spec.Storage.Path) {
-			err = fmt.Errorf("templated backup path does not match regex '%s': %s", backupPathPattern, r.Spec.Storage.Path)
-		}
+	} else if !regex.MatchString(r.Spec.Storage.Path) {
+		err = fmt.Errorf("templated backup path does not match regex '%s': %s", backupPathPattern, r.Spec.Storage.Path)
 	}
 	return
 }
 
 //+kubebuilder:webhook:path=/validate-backup-operator-io-v1-backuprun,mutating=false,failurePolicy=fail,sideEffects=None,groups=backup-operator.io,resources=backupruns,verbs=create;update;delete,versions=v1,name=vbackuprun.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &BackupRun{}
+var _ webhook.CustomValidator = &BackupRun{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *BackupRun) ValidateCreate() (admission.Warnings, error) {
-	return nil, r.validateBackupRun()
+func (r *BackupRun) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return r.validate(ctx, obj)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *BackupRun) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	return nil, r.validateBackupRun()
+func (r *BackupRun) ValidateUpdate(ctx context.Context, _, obj runtime.Object) (admission.Warnings, error) {
+	return r.validate(ctx, obj)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *BackupRun) ValidateDelete() (admission.Warnings, error) {
+func (r *BackupRun) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
-// validateBackupRun checks the overall BackupRun for correctness by validating its spec.
-// It calls validateBackupRunSpec to validate the spec and aggregates any validation errors into
+// validate checks the overall BackupRun for correctness by validating its spec.
+// It calls validateSpec to validate the spec and aggregates any validation errors into
 // a field.ErrorList. If there are no validation errors, it returns nil. Otherwise, it returns
 // an apierrors.Invalid error containing the aggregated field.ErrorList.
-func (r *BackupRun) validateBackupRun() error {
+func (r *BackupRun) validate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	log := log.FromContext(ctx)
+	run, ok := obj.(*BackupRun)
+	if !ok {
+		return nil, fmt.Errorf("expected a BackupRun but got a %T", obj)
+	}
+	log.V(1).Info("Validating BackupRun")
 	var allErrs field.ErrorList
-	if err := r.validateBackupRunSpec(); err != nil {
+	if err := run.validateSpec(); err != nil {
 		allErrs = append(allErrs, err)
 	}
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
-	return apierrors.NewInvalid(
+	return nil, apierrors.NewInvalid(
 		schema.GroupKind{
-			Group: r.GroupVersionKind().Group,
-			Kind:  r.Kind,
-		}, r.Name, allErrs)
+			Group: run.GroupVersionKind().Group,
+			Kind:  run.Kind,
+		}, run.Name, allErrs)
 }
 
-// validateBackupRunSpec checks the BackupRun spec for correctness and returns a field.Error if validation fails.
+// validateSpec checks the BackupRun spec for correctness and returns a field.Error if validation fails.
 // The function validates that either the Backup or Restore block is set, and if Restore is set, it checks
 // for the presence of the decryption key in the Encryption block.
 // Returns nil if the spec is valid, otherwise returns a field.Error indicating the validation error.
-func (r *BackupRun) validateBackupRunSpec() (err *field.Error) {
+func (r *BackupRun) validateSpec() (err *field.Error) {
 	if r.Spec.Backup == nil && r.Spec.Restore == nil {
 		fld := field.NewPath("spec")
 		msg := "neither the backup nor the restore block has been set, but at least one is required"

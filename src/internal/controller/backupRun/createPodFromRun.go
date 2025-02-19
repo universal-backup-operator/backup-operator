@@ -35,7 +35,8 @@ import (
 )
 
 func CreatePodFromRun(ctx context.Context, c client.Client, s *runtime.Scheme,
-	config *rest.Config, run *backupoperatoriov1.BackupRun, pod *corev1.Pod) (err error) {
+	config *rest.Config, run *backupoperatoriov1.BackupRun, pod *corev1.Pod,
+) (err error) {
 	// Delete run Pod if it exists
 	if err = c.Delete(ctx, pod.DeepCopy(), &client.DeleteOptions{
 		GracePeriodSeconds: ptr.To[int64](0),
@@ -93,16 +94,15 @@ func CreatePodFromRun(ctx context.Context, c client.Client, s *runtime.Scheme,
 				}
 			}
 		default:
-			if status, ok := event.Object.(*metav1.Status); !ok {
+			status, ok := event.Object.(*metav1.Status)
+			if !ok {
 				err = fmt.Errorf("failed to convert watcherEvent to metav1.Status: %+v", event)
 				return
-			} else {
-				switch status.Reason {
-				case metav1.StatusReasonInternalError:
-					internalErrors++
-					if internalErrors < 3 {
-						continue
-					}
+			}
+			if status.Reason == metav1.StatusReasonInternalError {
+				internalErrors++
+				if internalErrors < 3 {
+					continue
 				}
 			}
 			// We will be there in case of ERROR or DELETED event

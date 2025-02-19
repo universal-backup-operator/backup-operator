@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// UpdateMetric updates metric value
 func UpdateMetric(run *backupoperatoriov1.BackupRun) {
 	ownerName := ""
 	if owner := metav1.GetControllerOf(run); owner != nil {
@@ -39,6 +40,7 @@ func UpdateMetric(run *backupoperatoriov1.BackupRun) {
 	}
 }
 
+// DeleteMetric deletes metric from the operator
 func DeleteMetric(run *backupoperatoriov1.BackupRun) {
 	monitoring.BackupOperatorRunStatus.DeletePartialMatch(prometheus.Labels{
 		"namespace": run.Namespace,

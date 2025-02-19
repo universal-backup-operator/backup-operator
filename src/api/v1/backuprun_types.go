@@ -116,6 +116,7 @@ type backupStorage struct {
 type compressionAlgorithm string
 
 const (
+	// GZIP compression name
 	GZIP compressionAlgorithm = "gzip"
 )
 
@@ -164,22 +165,23 @@ type pod struct {
 }
 
 // +kubebuilder:validation:Enum=Idle;InProgress;Successful;Failed
+// BackupRunConditionType enum
 type BackupRunConditionType string
 
 const (
-	// Backup or restoration has been never run
+	// BackupRunConditionTypeNeverRun Backup or restoration has been never run
 	BackupRunConditionTypeNeverRun BackupRunConditionType = "NeverRun"
-	// Backup is in progress
+	// BackupRunConditionTypeInProgress Backup is in progress
 	BackupRunConditionTypeInProgress BackupRunConditionType = "InProgress"
-	// Backup has finished successfully
+	// BackupRunConditionTypeSuccessful Backup has finished successfully
 	BackupRunConditionTypeSuccessful BackupRunConditionType = "Successful"
-	// Backup has finished with an error
+	// BackupRunConditionTypeFailed Backup has finished with an error
 	BackupRunConditionTypeFailed BackupRunConditionType = "Failed"
-	// May be restored automatically
+	// BackupRunConditionTypeRestorable May be restored automatically
 	BackupRunConditionTypeRestorable BackupRunConditionType = "Restorable"
-	// Is encrypted, message will contain public key that was used for encryption
+	// BackupRunConditionTypeEncrypted Is encrypted, message will contain public key that was used for encryption
 	BackupRunConditionTypeEncrypted BackupRunConditionType = "Encrypted"
-	// Is compressed, message will contain algorithm
+	// BackupRunConditionTypeCompressed Is compressed, message will contain algorithm
 	BackupRunConditionTypeCompressed BackupRunConditionType = "Compressed"
 )
 
@@ -231,6 +233,7 @@ Backup is streamed to the BackupStorage through compression\encryption processor
 //+kubebuilder:printcolumn:name="Size",type=string,JSONPath=`.status.size`,description="Backup file size",priority=1
 //+kubebuilder:printcolumn:name="Age",type=date,format=date-time,JSONPath=`.metadata.creationTimestamp`,description="Creation timestamp"
 
+// BackupRun CRD definition
 type BackupRun struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,3,req,name=metadata"`

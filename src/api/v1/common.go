@@ -16,7 +16,7 @@ limitations under the License.
 
 package v1
 
-/* These are labels and annotation fields from standard metav1.ObjectMeta. */
+// TemplateMetadata These are labels and annotation fields from standard metav1.ObjectMeta.
 type TemplateMetadata struct {
 	// Map of string keys and values that can be used to organize and categorize
 	// (scope and select) objects. May match selectors of replication controllers
@@ -34,6 +34,6 @@ type TemplateMetadata struct {
 }
 
 const (
-	// Readiness marker
+	// ConditionTypeReady Readiness marker
 	ConditionTypeReady string = "Ready"
 )

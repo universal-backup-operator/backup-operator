@@ -93,7 +93,7 @@ func TextTemplateSprig(t string, v any) (string, error) {
 	return buffer.String(), nil
 }
 
-// Creates time.Ticker object for nextTime (can be calculated from cronexpr)
+// CreateTimeTicker Creates time.Ticker object for nextTime (can be calculated from cronexpr)
 func CreateTimeTicker(nextTime time.Time) *time.Ticker {
 	// Get the current time
 	currentTime := time.Now()
@@ -103,12 +103,12 @@ func CreateTimeTicker(nextTime time.Time) *time.Ticker {
 	return time.NewTicker(durationUntilNextRun)
 }
 
-// Thanks to https://gist.github.com/yakuter/6bf1e565311d11251febda4a04a6bc64
+// PipeCopyFunc Thanks to https://gist.github.com/yakuter/6bf1e565311d11251febda4a04a6bc64
 type PipeCopyFunc func(buffer []byte) (n int, err error)
 
 func (f PipeCopyFunc) Read(buffer []byte) (n int, err error) { return f(buffer) }
 
-// Function for streaming data from writer to reader with context honoring
+// PipeCopy Function for streaming data from writer to reader with context honoring
 var PipeCopy = func(ctx context.Context, r io.Reader, w io.Writer) (err error) {
 	reader := PipeCopyFunc(func(buffer []byte) (int, error) {
 		// golang non-blocking channel: https://gobyexample.com/non-blocking-channel-operations

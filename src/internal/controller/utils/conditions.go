@@ -32,19 +32,18 @@ func (e *ConditionNotFound) Error() string {
 	return fmt.Sprintf("Condition '%s' not found", e.ConditionType)
 }
 
-// Get condition status string from bool
+// ToConditionStatus Get condition status string from bool
 func ToConditionStatus(b *bool) metav1.ConditionStatus {
 	if b == nil {
 		return metav1.ConditionUnknown
 	}
 	if *b {
 		return metav1.ConditionTrue
-	} else {
-		return metav1.ConditionFalse
 	}
+	return metav1.ConditionFalse
 }
 
-// Adds condition if it did not exist
+// AddConditions Adds condition if it did not exist
 func AddConditions(cs []metav1.Condition, c ...metav1.Condition) *[]metav1.Condition {
 	var exists bool
 	for _, new := range c {

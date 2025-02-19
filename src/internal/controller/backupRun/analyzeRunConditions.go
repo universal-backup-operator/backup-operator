@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// BackupRunState holds result of BackupRun analysis
 type BackupRunState struct {
 	// True if ready
 	Ready bool
@@ -52,7 +53,7 @@ type BackupRunState struct {
 
 var inProgressRuns = &sync.Map{}
 
-// Analyze BackupRun conditions in one place
+// AnalyzeRunConditions Analyze BackupRun conditions in one place
 func AnalyzeRunConditions(run *backupoperatoriov1.BackupRun) (s *BackupRunState) {
 	s = &BackupRunState{}
 	// Either we have are in progress according to conditions

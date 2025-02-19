@@ -28,9 +28,10 @@ import (
 	"backup-operator.io/internal/controller/utils"
 )
 
-// Update backup size status field
+// SetBackupSizeInStatus updates backup size status field
 func SetBackupSizeInStatus(ctx context.Context, c client.Client,
-	run *backupoperatoriov1.BackupRun, storage backupstorage.BackupStorageProvider) (err error) {
+	run *backupoperatoriov1.BackupRun, storage backupstorage.BackupStorageProvider,
+) (err error) {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() (err error) {
 		if err = c.Get(ctx, client.ObjectKeyFromObject(run), run); err != nil {
 			return err

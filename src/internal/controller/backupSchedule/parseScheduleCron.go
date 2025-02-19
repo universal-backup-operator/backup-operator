@@ -17,6 +17,7 @@ limitations under the License.
 package backupschedule
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -38,11 +39,12 @@ func ParseScheduleCron(schedule *backupoperatoriov1.BackupSchedule, now time.Tim
 	}
 	// Create a parser
 	var parser *cron.SpecSchedule
-	if s, err := cron.ParseStandard(schedule.Spec.Schedule); err != nil {
+	var s cron.Schedule
+	s, err = cron.ParseStandard(schedule.Spec.Schedule)
+	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("unparseable schedule %q: %s", schedule.Spec.Schedule, err.Error())
-	} else {
-		parser, _ = s.(*cron.SpecSchedule)
 	}
+	parser, _ = s.(*cron.SpecSchedule)
 	parser.Location = location
 	// If schedule has been annotated with trigger annotation...
 	// ...exit as it is a time to run
@@ -91,7 +93,7 @@ func ParseScheduleCron(schedule *backupoperatoriov1.BackupSchedule, now time.Tim
 		starts++
 		if starts > (60 * 24 * 7) {
 			// We can't get the most recent times so just return an empty slice
-			return time.Time{}, time.Time{}, fmt.Errorf("too many missed start times (> 10080), set or decrease .spec.startingDeadlineSeconds or check clock skew")
+			return time.Time{}, time.Time{}, errors.New("too many missed start times (> 10080), set or decrease .spec.startingDeadlineSeconds or check clock skew")
 		}
 	}
 	return lastMissed, parser.Next(now), nil

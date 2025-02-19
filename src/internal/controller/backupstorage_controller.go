@@ -229,7 +229,7 @@ func (b *backupStorageLifecycle) Processor(ctx context.Context, r *utils.Managed
 			utils.Log(r, log, err, storage, "FailedGet", "could not list child runs")
 			return err
 		}
-		var childRunsSizeInBytes uint = 0
+		var childRunsSizeInBytes uint
 		for _, run := range childRuns.Items {
 			if run.Status.SizeInBytes != nil {
 				childRunsSizeInBytes += *run.Status.SizeInBytes
@@ -271,7 +271,7 @@ func (r *BackupStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupoperatoriov1.BackupStorage{}).
 		Watches(&backupoperatoriov1.BackupSchedule{}, handler.EnqueueRequestsFromMapFunc(
-			func(ctx context.Context, o client.Object) []reconcile.Request {
+			func(_ context.Context, o client.Object) []reconcile.Request {
 				schedule := o.(*backupoperatoriov1.BackupSchedule)
 				return []reconcile.Request{
 					{
@@ -283,7 +283,7 @@ func (r *BackupStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}),
 		).
 		Watches(&backupoperatoriov1.BackupRun{}, handler.EnqueueRequestsFromMapFunc(
-			func(ctx context.Context, o client.Object) []reconcile.Request {
+			func(_ context.Context, o client.Object) []reconcile.Request {
 				run := o.(*backupoperatoriov1.BackupRun)
 				return []reconcile.Request{
 					{
