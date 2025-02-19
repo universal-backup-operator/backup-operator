@@ -3,14 +3,13 @@ version: 2
 project_name: backup-operator
 before:
   hooks:
-    - sh -c 'cd src && go mod tidy'
+    - go mod tidy
 report_sizes: true
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
 builds:
   - id: default
     main: ./cmd/main.go
-    dir: src
     goos:
       - linux
     goarch:

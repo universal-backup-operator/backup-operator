@@ -39,6 +39,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
+          workdir: src
           distribution: goreleaser
           args: release --clean --fail-fast --snapshot --skip=archive
         env:

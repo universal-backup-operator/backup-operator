@@ -86,9 +86,13 @@ jobs:
               yq -i '.release += {"make_latest":false}' src/.goreleaser.yaml
             fi
 
+      - name: Copy extra files
+        run: cp -v ../LICENSE ../README.md ./
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
+          workdir: src
           distribution: goreleaser
           args: release --clean --fail-fast --skip=docker,validate
         env:
