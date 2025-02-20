@@ -94,4 +94,5 @@ dockers:
       - "--label=org.opencontainers.image.version={{.Version}}"
 release:
   extra_files:
-    - glob: ./extra-release-files/*
+    - glob: crds.yaml
+    - glob: install.yaml

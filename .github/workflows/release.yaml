@@ -48,9 +48,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Create extra-release-files directory
-        run: mkdir extra-release-files
-
       - name: Version without a v
         id: version
         run: >-
@@ -74,10 +71,10 @@ jobs:
           cmd: yq -i "$TEMPLATE" src/config/manager/kustomization.yaml
 
       - name: Kustomize Build
-        run: kustomize build src/config/default | tee extra-release-files/install.yaml
+        run: kustomize build src/config/default | tee src/install.yaml
 
       - name: CRDs Build
-        run: cat src/config/crd/bases/* | tee extra-release-files/crds.yaml
+        run: cat src/config/crd/bases/* | tee src/crds.yaml
 
       #  ┬─┐┬─┐┬  ┬─┐┬─┐┐─┐┬─┐
       #  │┬┘├─ │  ├─ │─┤└─┐├─ 
