@@ -51,6 +51,12 @@ jobs:
       - name: Create extra-release-files directory
         run: mkdir extra-release-files
 
+      - name: Version without a v
+        id: version
+        run: >-
+          echo "${{ github.ref_name }}" | sed -r 's/^v//g' |
+          xargs printf "version=%s" >> "$GITHUB_OUTPUT"
+
       #  ┬┌ ┬ ┐┐─┐┌┐┐┌─┐┌┌┐o┌─┐┬─┐
       #  ├┴┐│ │└─┐ │ │ │││││┌─┘├─ 
       #  ┘ ┘┘─┘──┘ ┘ ┘─┘┘ ┘┘└─┘┴─┘
@@ -65,7 +71,7 @@ jobs:
               "newTag": "${{ steps.version.outputs.version }}"
             }
         with:
-          cmd: yq -i "${TEMPLATE}" src/config/manager/kustomization.yaml
+          cmd: yq -i "$TEMPLATE" src/config/manager/kustomization.yaml
 
       - name: Kustomize Build
         run: kustomize build src/config/default | tee extra-release-files/install.yaml
@@ -81,7 +87,7 @@ jobs:
         uses: mikefarah/yq@v4
         with:
           cmd: |-
-            if [[ '${{ github.ref_name }}' =~ -rc ]]; then
+            if [[ '${{ steps.version.outputs.version }}' =~ -rc ]]; then
               echo "::notice::Marking as not latest"
               yq -i '.release += {"make_latest":false}' src/.goreleaser.yaml
             fi
@@ -101,28 +107,26 @@ jobs:
       - name: Docker create manifest
         run: >-
           cat docker-images.txt |
-          xargs docker buildx imagetools create --tag 'ghcr.io/${{ github.repository }}:${{ github.ref_name }}'
+          xargs docker buildx imagetools create --tag 'ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}'
 
       #  ┬ ┬┬─┐┬  ┌┌┐
       #  │─┤├─ │  │││
       #  ┘ ┴┴─┘┘─┘┘ ┘
 
-      - name: Update chart appVersion
-        uses: mikefarah/yq@v4
-        with:
-          cmd: |-
-            yq -i '.appVersion = "${{ github.ref_name }}"' charts/backup-operator/Chart.yaml
-            yq -i '.version = "${{ github.ref_name }}"' charts/backup-operator/Chart.yaml
-            cat charts/backup-operator/Chart.yaml
+      - name: Package chart
+        run: >-
+          helm package
+            --dependency-update
+            --app-version="${{ steps.version.outputs.version }}"
+            --version="${{ steps.version.outputs.version }}"
+            charts/backup-operator
+        env:
+          HELM_EXPERIMENTAL_OCI: "1"
 
       - name: Push chart
-        uses: appany/helm-oci-chart-releaser@v0.4.2
-        with:
-          name: chart
-          repository: ${{ github.repository }}
-          tag: ${{ github.ref_name }}
-          path: charts/backup-operator
-          registry: ghcr.io
-          registry_username: ${{ github.actor }}
-          registry_password: ${{ github.token }}
-          update_dependencies: 'true'
+        run: >-
+          helm push
+            backup-operator-${{ steps.version.outputs.version }}.tgz
+            'oci://ghcr.io/${{ github.repository }}/helm-charts'
+        env:
+          HELM_EXPERIMENTAL_OCI: "1"
