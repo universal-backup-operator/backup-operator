@@ -58,6 +58,4 @@ jobs:
         uses: actions/cache/save@v4
         with:
           key: ${{ github.sha }}
-          path: |-
-            src/dist
-            docker-images.txt
+          path:  docker-images.txt

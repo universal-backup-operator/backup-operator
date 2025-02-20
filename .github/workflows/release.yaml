@@ -27,9 +27,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           key: ${{ github.sha }}
-          path: |-
-            src/dist
-            docker-images.txt
+          path: docker-images.txt
           fail-on-cache-miss: true
 
       - name: Install kustomize
@@ -102,7 +100,7 @@ jobs:
         with:
           workdir: src
           distribution: goreleaser
-          args: release --fail-fast --skip=docker,validate
+          args: release --clean --fail-fast --skip=docker,validate
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
