@@ -54,8 +54,10 @@ jobs:
           tee docker-images.txt |
           xargs docker buildx imagetools create --tag 'ghcr.io/${{ github.repository }}:latest'
 
-      - name: Cache docker-images.txt
+      - name: Cache save
         uses: actions/cache/save@v4
         with:
-          path: docker-images.txt
-          key: docker-images.txt-${{ github.sha }}
+          key: ${{ github.sha }}
+          path: |-
+            src/dist
+            docker-images.txt

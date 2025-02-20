@@ -23,11 +23,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Cache docker-images.txt
+      - name: Cache restore
         uses: actions/cache/restore@v4
         with:
-          path: docker-images.txt
-          key: docker-images.txt-${{ github.sha }}
+          key: ${{ github.sha }}
+          path: |-
+            src/dist
+            docker-images.txt
           fail-on-cache-miss: true
 
       - name: Install kustomize
@@ -114,19 +116,19 @@ jobs:
       #  ┘ ┴┴─┘┘─┘┘ ┘
 
       - name: Package chart
-        run: >-
-          helm package
-            --dependency-update
-            --app-version="${{ steps.version.outputs.version }}"
-            --version="${{ steps.version.outputs.version }}"
+        run: |-
+          helm package \
+            --dependency-update \
+            --app-version="${{ steps.version.outputs.version }}" \
+            --version="${{ steps.version.outputs.version }}" \
             charts/backup-operator
         env:
           HELM_EXPERIMENTAL_OCI: "1"
 
       - name: Push chart
-        run: >-
-          helm push
-            backup-operator-${{ steps.version.outputs.version }}.tgz
+        run: |-
+          helm push \
+            backup-operator-${{ steps.version.outputs.version }}.tgz \
             'oci://ghcr.io/${{ github.repository }}/helm-charts'
         env:
           HELM_EXPERIMENTAL_OCI: "1"
