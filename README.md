@@ -14,9 +14,7 @@ Operator controls creation and **restoration** of backups. You create *BackupSto
 ### Helm
 
 ```shell
-helm repo add backup-operator https://helm-charts.backup-operator.io/
-helm repo update
-helm install backup-operator backup-operator/backup-operator
+helm install backup-operator oci://ghcr.io/universal-backup-operator/backup-operator/helm-charts/backup-operator
 ```
 
 ### Manifest
