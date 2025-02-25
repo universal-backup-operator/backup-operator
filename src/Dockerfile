@@ -1,7 +1,7 @@
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
-COPY backup-operator /backup-operator
+COPY backup-operator /manager
 # nobody
 USER 65534:65534
-ENTRYPOINT ["/backup-operator"]
+ENTRYPOINT ["/manager"]
