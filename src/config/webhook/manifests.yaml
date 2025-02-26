@@ -30,7 +30,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-backup-operator-io-v1-backupstorage
+      path: /mutate-backup-operator-io-v1-backupstorage1
   failurePolicy: Fail
   name: mbackupstorage.kb.io
   rules:

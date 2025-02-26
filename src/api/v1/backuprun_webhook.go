@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -37,12 +36,12 @@ import (
 func (r *BackupRun) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(r).
+		WithValidator(r).
 		Complete()
 }
 
 //+kubebuilder:webhook:path=/mutate-backup-operator-io-v1-backuprun,mutating=true,failurePolicy=fail,sideEffects=None,groups=backup-operator.io,resources=backupruns,verbs=create;update,versions=v1,name=mbackuprun.kb.io,admissionReviewVersions=v1
-
-var _ webhook.CustomDefaulter = &BackupRun{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *BackupRun) Default(ctx context.Context, obj runtime.Object) (err error) {
@@ -90,8 +89,6 @@ func (r *BackupRun) TemplateStoragePath() (err error) {
 }
 
 //+kubebuilder:webhook:path=/validate-backup-operator-io-v1-backuprun,mutating=false,failurePolicy=fail,sideEffects=None,groups=backup-operator.io,resources=backupruns,verbs=create;update;delete,versions=v1,name=vbackuprun.kb.io,admissionReviewVersions=v1
-
-var _ webhook.CustomValidator = &BackupRun{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupRun) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {

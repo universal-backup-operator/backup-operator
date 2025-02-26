@@ -27,19 +27,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (r *BackupStorage) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(r).
+		WithValidator(r).
 		Complete()
 }
 
 //+kubebuilder:webhook:path=/mutate-backup-operator-io-v1-backupstorage,mutating=true,failurePolicy=fail,sideEffects=None,groups=backup-operator.io,resources=backupstorages,verbs=create,versions=v1,name=mbackupstorage.kb.io,admissionReviewVersions=v1
-
-var _ webhook.CustomDefaulter = &BackupStorage{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 // Launched on CREATE only
@@ -60,8 +59,6 @@ func (r *BackupStorage) Default(ctx context.Context, obj runtime.Object) (err er
 }
 
 //+kubebuilder:webhook:path=/validate-backup-operator-io-v1-backupstorage,mutating=false,failurePolicy=fail,sideEffects=None,groups=backup-operator.io,resources=backupstorages,verbs=create;update;delete,versions=v1,name=vbackupstorage.kb.io,admissionReviewVersions=v1
-
-var _ webhook.CustomValidator = &BackupStorage{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *BackupStorage) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {

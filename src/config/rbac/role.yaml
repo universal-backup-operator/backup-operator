@@ -45,57 +45,7 @@ rules:
   - backup-operator.io
   resources:
   - backupruns
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - backup-operator.io
-  resources:
-  - backupruns/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - backup-operator.io
-  resources:
-  - backupruns/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - backup-operator.io
-  resources:
   - backupschedules
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - backup-operator.io
-  resources:
-  - backupschedules/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - backup-operator.io
-  resources:
-  - backupschedules/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - backup-operator.io
-  resources:
   - backupstorages
   verbs:
   - create
@@ -108,12 +58,16 @@ rules:
 - apiGroups:
   - backup-operator.io
   resources:
+  - backupruns/finalizers
+  - backupschedules/finalizers
   - backupstorages/finalizers
   verbs:
   - update
 - apiGroups:
   - backup-operator.io
   resources:
+  - backupruns/status
+  - backupschedules/status
   - backupstorages/status
   verbs:
   - get
